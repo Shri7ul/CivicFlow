@@ -49,6 +49,9 @@ def test_offline_postgresql_migration_renders_postgis_and_rls(
     assert "GRANT SELECT ON TABLE public.incident_status_events" in output
     assert "civicflow_evidence_read" in output
     assert "ck_incident_evidence_allowed_mime_type" in output
+    assert "CREATE TABLE incident_relationships" in output
+    assert "incident_relationships_read_visible_pair" in output
+    assert "REVOKE ALL PRIVILEGES ON TABLE public.incident_relationships" in output
     assert "REVOKE ALL PRIVILEGES ON TABLE public.profiles" in output
     assert "GRANT SELECT ON TABLE public.profiles" in output
 
@@ -74,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0005_map_evidence_storage"
+    assert version == "0008_confidence_check_name"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -109,6 +112,9 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0003_acl_hardening.py",
         "0004_incident_lifecycle.py",
         "0005_map_evidence_storage.py",
+        "0006_incident_intelligence.py",
+        "0007_relationship_checks.py",
+        "0008_confidence_check_name.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -127,3 +133,12 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "civicflow_evidence_read" in evidence_storage
     assert "REVOKE INSERT ON TABLE public.incident_evidence" in evidence_storage
     assert "ck_incident_evidence_allowed_mime_type" in evidence_storage
+    intelligence = versions[5].read_text(encoding="utf-8")
+    assert "incident_relationships" in intelligence
+    assert "incident_relationships_read_visible_pair" in intelligence
+    assert "REVOKE ALL PRIVILEGES" in intelligence
+    assert "relationship_logical_unique" in intelligence
+    checks = versions[6].read_text(encoding="utf-8")
+    assert "RENAME CONSTRAINT" in checks
+    final_check = versions[7].read_text(encoding="utf-8")
+    assert "confidence_range" in final_check

@@ -43,6 +43,17 @@ class ClusterStatus(str, Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class RelationshipType(str, Enum):
+    RELATED = "RELATED"
+    DUPLICATE = "DUPLICATE"
+    CONTEXT = "CONTEXT"
+
+
+class RelationshipStatus(str, Enum):
+    CONFIRMED = "CONFIRMED"
+    DISMISSED = "DISMISSED"
+
+
 class AssetType(str, Enum):
     ROAD = "ROAD"
     DRAIN = "DRAIN"

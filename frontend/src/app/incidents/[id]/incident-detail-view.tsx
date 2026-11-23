@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { EvidenceGallery } from "@/components/incidents/evidence-gallery";
+import { IncidentIntelligencePanel } from "@/components/incidents/incident-intelligence";
 import { SeverityBadge, StatusBadge } from "@/components/incidents/status-badge";
 import {
   changeIncidentStatus,
@@ -474,6 +475,11 @@ export function IncidentDetailView({ incidentId }: { incidentId: string }) {
               : current,
           );
         }}
+      />
+
+      <IncidentIntelligencePanel
+        incidentId={incident.id}
+        canReview={isStaff}
       />
     </main>
   );

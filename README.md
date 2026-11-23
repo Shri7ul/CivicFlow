@@ -6,14 +6,15 @@ CivicFlow is a full-stack platform for modeling interconnected civic incidents,
 understanding urban risk, and coordinating municipal response. The repository
 currently contains **Phase 0** (application foundation), **Phase 1** (database
 architecture + authentication/authorization), **Phase 1.6** (security hardening),
-**Phase 2** (incident reporting and lifecycle management), and **Phase 3**
-(spatial map, clustering, and private evidence).
+**Phase 2** (incident reporting and lifecycle management), **Phase 3**
+(spatial map, clustering, and private evidence), and **Phase 4** (explainable
+incident intelligence).
 
-Phase 3 adds an authenticated MapLibre GL JS map with viewport-scoped PostGIS
-queries, native GeoJSON clustering, filter/list synchronization, and private
-Supabase Storage evidence with short-lived signed previews. Risk scoring,
-dependency analysis, duplicate detection, scenario simulation, and notifications
-remain future work. See [docs/PROGRESS.md](docs/PROGRESS.md) for current status,
+Phase 4 adds deterministic correlation and duplicate suggestions, reviewable
+relationship records, PostGIS infrastructure proximity, and dependency-aware
+impact foundations. Every suggestion carries reasons, confidence, and explicit
+limitations; nothing is auto-merged. Risk scoring, scenario simulation,
+notifications, and authoritative municipal dataset ingestion remain future work. See [docs/PROGRESS.md](docs/PROGRESS.md) for current status,
 verification evidence, and known boundaries.
 
 ## What is implemented
@@ -80,6 +81,29 @@ verification evidence, and known boundaries.
   `/incidents/[id]`, with report creation, filtering, detail, editing, staff
   actions, and lifecycle history.
 
+### Phase 4 — incident intelligence
+
+- `GET /api/v1/incidents/{id}/intelligence` returns duplicate and related
+  candidates with per-signal explanations, confirmed/dismissed reviews,
+  nearby infrastructure, dependency-aware potential impact paths, thresholds,
+  and data limitations.
+- Signals combine PostGIS distance, temporal proximity, category compatibility,
+  normalized text similarity, and severity similarity with configurable
+  thresholds. Suggestions are computed on demand and are never auto-merged.
+- `POST /api/v1/incidents/{id}/relationships` lets WORKER/ADMIN users confirm or
+  dismiss a relationship. Pairs are canonical and unique; review provenance is
+  persisted with actor, timestamp, confidence, signals, and note.
+- Citizen visibility is preserved: a Citizen never sees another Citizen's
+  incident, relationship, or intelligence candidate.
+- `GET /api/v1/infrastructure/assets` exposes the authenticated active asset
+  reference set for future operational tooling.
+- Infrastructure proximity is a spatial association only. Dependency paths are
+  labeled `INFERRED_POTENTIAL`; the API does not claim observed damage, outage,
+  or real-world cascade prediction.
+- The incident detail page renders suggestions, explainability details,
+  staff-reviewed relationships, infrastructure context, impact paths,
+  thresholds, and limitations with loading/error/empty states.
+
 ### Phase 3 — spatial map, clustering, and evidence
 
 - Protected `/map` route with client-only MapLibre GL JS rendering, a central
@@ -125,12 +149,13 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (14 tables)
+    models/                   SQLAlchemy model registry (15 tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
     services/evidence.py      Evidence validation, upload, signed URL flow
     services/storage.py       Server-only Supabase Storage adapter
+    services/intelligence.py  Correlation, duplicate, infrastructure, impact
     seed.py                   Deterministic development seed
   alembic/
     versions/0001_initial_schema.py
@@ -138,6 +163,9 @@ backend/
     versions/0003_acl_hardening.py
     versions/0004_incident_lifecycle.py
     versions/0005_map_evidence_storage.py
+    versions/0006_incident_intelligence.py
+    versions/0007_relationship_checks.py
+    versions/0008_confidence_check_name.py
   tests/                      Config, DB, auth, API, migration, seed tests
 ```
 
@@ -152,7 +180,7 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0005_map_evidence_storage`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0008_confidence_check_name`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
@@ -267,6 +295,10 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `GET` | `/api/v1/incidents/{id}/evidence` | Evidence metadata for a visible incident |
 | `POST` | `/api/v1/incidents/{id}/evidence` | Upload 1–5 private images |
 | `GET` | `/api/v1/incidents/{id}/evidence/{evidence_id}/url` | Short-lived signed preview URL |
+| `GET` | `/api/v1/incidents/{id}/intelligence` | Explainable duplicate/related, infrastructure, and impact context |
+| `GET` | `/api/v1/incidents/{id}/relationships` | Visible persisted relationship reviews |
+| `POST` | `/api/v1/incidents/{id}/relationships` | WORKER/ADMIN confirm or dismiss a relationship |
+| `GET` | `/api/v1/infrastructure/assets` | Active infrastructure reference set |
 | `GET` | `/api/v1/departments` | Active departments for assignment |
 
 A valid Supabase token without a profile receives `403 profile_required`; call
@@ -329,6 +361,15 @@ rejected. The last active administrator cannot be demoted.
 | `SUPABASE_STORAGE_SIGNED_URL_SECONDS` | `300` | Signed preview lifespan (60–3600) |
 | `EVIDENCE_MAX_FILE_SIZE_BYTES` | `10485760` | Per-file cap (10 MB) |
 | `EVIDENCE_MAX_FILES_PER_UPLOAD` | `5` | Per-request file cap |
+| `INTELLIGENCE_DUPLICATE_RADIUS_M` | `250` | Duplicate search radius (metres) |
+| `INTELLIGENCE_RELATED_RADIUS_M` | `1500` | Related-candidate search radius |
+| `INTELLIGENCE_DUPLICATE_WINDOW_HOURS` | `24` | Duplicate time window |
+| `INTELLIGENCE_RELATED_WINDOW_HOURS` | `72` | Related-candidate time window |
+| `INTELLIGENCE_DUPLICATE_TEXT_THRESHOLD` | `0.30` | Minimum normalized text score |
+| `INTELLIGENCE_DUPLICATE_CONFIDENCE_THRESHOLD` | `0.55` | Minimum duplicate confidence |
+| `INTELLIGENCE_RELATED_CONFIDENCE_THRESHOLD` | `0.42` | Minimum related confidence |
+| `INTELLIGENCE_INFRASTRUCTURE_RADIUS_M` | `1000` | Asset proximity radius |
+| `INTELLIGENCE_IMPACT_DEPTH` / `LIMIT` | `2` / `20` | Dependency-path bounds |
 
 Production validation rejects debug mode, empty CORS origins, a missing
 database URL, and a missing Supabase URL. Secret settings use `SecretStr` and
@@ -358,6 +399,10 @@ instead of crashing. The production build succeeds without live credentials.
 - `alembic/versions/0004_incident_lifecycle.py` adds the immutable
   `incident_status_events` table, its indexes, a visibility RLS policy, and
   SELECT-only grants for `authenticated`.
+- `alembic/versions/0006_incident_intelligence.py` adds
+  `incident_relationships`, its constraints/indexes, RLS, and SELECT-only grants.
+  `0007`/`0008` normalize CHECK constraint names created during early Phase 4
+  development.
 - `alembic/versions/0005_map_evidence_storage.py` adds evidence MIME/size
   constraints and a composite index, revokes direct authenticated INSERT on
   `incident_evidence`, and creates the private `incident-evidence` Storage
@@ -383,8 +428,8 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0005_map_evidence_storage`; all 14 application tables, 18
-  application RLS policies, 8 triggers, 14 foreign keys, 5 unique constraints,
+- Alembic is at `0008_confidence_check_name`; all 15 application tables, 19
+  application RLS policies, 9 triggers, 17 foreign keys, 6 unique constraints,
   and 4 GIST indexes exist. The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
 - RLS was exercised with synthetic JWT claims inside a rolled-back transaction
@@ -395,9 +440,10 @@ The configured Supabase project was validated on **2026-11-23**:
 - Live least-privilege hardening removed inherited `TRUNCATE`, `REFERENCES`,
   `TRIGGER`, and `MAINTAIN` grants from `anon`/`authenticated`; `service_role`
   was intentionally left unchanged. Anonymous now has no application-table
-  grants. After `0005`, authenticated has SELECT on all 14 tables, INSERT on
-  incidents and scenarios, column UPDATE on `profiles.full_name/phone` only, and
-  no direct INSERT on `incident_evidence`.
+  grants. After `0008`, authenticated has SELECT on all 15 application tables,
+  INSERT on incidents and scenarios, column UPDATE on `profiles.full_name/phone`
+  only, and no direct INSERT on `incident_evidence` or
+  `incident_relationships`.
 - Real Supabase Auth users were created only for isolated validation and deleted
   afterward. Sign-in issued real ES256 access tokens; the backend accepted them
   through the live JWKS, profile provisioning worked, `/auth/me` returned the
@@ -419,6 +465,13 @@ The configured Supabase project was validated on **2026-11-23**:
   PostGIS WKT round-tripping, and lifecycle history were verified live.
 - A transactional real-role RLS check confirmed that lifecycle history is
   visible only to the incident reporter and staff.
+- Phase 4 live validation created isolated real users, incidents, assets, and a
+  dependency edge. It verified duplicate suggestions, cross-Citizen privacy,
+  staff-only relationship review, relationship persistence/uniqueness, opaque
+  404s, PostGIS asset proximity, inferred-impact labeling, authenticated asset
+  listing, and cleanup back to zero. Headless Chrome verified the rendered
+  intelligence panel, duplicate explanation, empty states, thresholds, and
+  limitations.
 - Phase 3 live validation exercised real Supabase Auth, PostGIS bbox filters,
   private Storage upload, MIME/filename/size validation, signed URL download,
   and denial of another Citizen's evidence. Headless Chrome verified map render,
@@ -426,8 +479,8 @@ The configured Supabase project was validated on **2026-11-23**:
   expansion, geolocation, report map picker, signed image preview, upload
   progress, mobile layout, and route protection.
 - All test users, profiles, incidents, evidence rows, Storage objects, lifecycle
-  events, and the temporary department were deleted; Auth/application counts
-  returned to zero.
+  events, relationships, infrastructure assets, dependency edges, and temporary
+  departments were deleted; Auth/application counts returned to zero.
 
 ## Testing
 
@@ -449,7 +502,9 @@ model and constraint tests, SQLite migration upgrade/downgrade, offline
 PostgreSQL DDL rendering, seed idempotency, JWT verification (ES256/RS256
 JWKS rotation and HS256 rejection), provisioning, RBAC matrix, audited role changes,
 last-admin protection, incident visibility, validation, editing rules,
-lifecycle transitions, history, and department assignment.
+lifecycle transitions, history, department assignment, duplicate/related
+scoring, relationship review and privacy, infrastructure proximity, and
+dependency-path labeling.
 
 ### Frontend
 
@@ -463,8 +518,9 @@ npm run build
 
 Vitest covers the API client, auth/profile API calls, incident query
 serialization and lifecycle helpers, open-redirect protection, optimistic
-cookie handling, auth state derivation, role labels, and public Supabase
-configuration.
+cookie handling, auth state derivation, role labels, public Supabase
+configuration, intelligence API calls, confidence/distance formatting, and
+suggestion-vs-inference labels.
 
 ### Verification boundary
 
@@ -512,7 +568,7 @@ configuration.
 | Profile provisioning / audited roles | Complete and tested |
 | Frontend auth foundation | Complete and tested |
 | Supabase RLS | Applied live; synthetic-claim policy matrix and real-user flows verified |
-| ACL least privilege | Applied live through `0005_map_evidence_storage`; verified directly |
+| ACL least privilege | Applied live through `0008_confidence_check_name`; verified directly |
 | Legacy HS256 JWT path | Removed; ES256/JWKS only |
 | Incident report/list/detail/edit | Complete and tested |
 | Incident lifecycle and history | Complete and tested |
@@ -522,7 +578,11 @@ configuration.
 | Native clustering and map/list sync | Complete; live browser verified |
 | Private evidence upload + signed previews | Complete; live API/browser verified |
 | Storage client RLS policy | Not applied on hosted Supabase (table owner restriction); direct storage reads are deny-all |
-| Risk / dependency / scenarios / notifications | Not implemented (future phases) |
+| Incident intelligence and duplicate suggestions | Complete; live API/browser verified |
+| Reviewable incident relationships | Complete; live API verified |
+| Infrastructure proximity / impact foundation | Complete; live API verified |
+| Risk / scenarios / notifications / authoritative asset ingestion | Not implemented (future phases) |
 
-Phase 3 spatial operations and private evidence are the current endpoint. No
-commit has been created for this work; all changes remain in the working tree.
+Phase 4 incident intelligence is the current endpoint. Phase 3 was committed and
+pushed as `69cf003` (`feat(civicflow): complete phase 3 spatial intelligence`);
+the Phase 4 changes are intentionally uncommitted in the working tree.

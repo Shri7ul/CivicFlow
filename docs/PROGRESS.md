@@ -17,8 +17,72 @@ Last updated: 2026-11-24
 | Phase 2 / Goal 05 — incident API/lifecycle | ACCEPTED | Migration `0004`, API, live API validation |
 | Phase 2 / Goal 06 — incident frontend | ACCEPTED | `/incidents`, `/incidents/new`, `/incidents/[id]`, live browser flow |
 | Phase 3 — spatial map, clustering, evidence | ACCEPTED (storage-policy limitation) | Migration `0005`, map/evidence live API + browser runs, 112 backend / 44 frontend tests |
+| Phase 4 — incident intelligence | ACCEPTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
 
-The working tree is intentionally uncommitted. No push was performed.
+Phase 3 was committed and pushed as `69cf003`
+(`feat(civicflow): complete phase 3 spatial intelligence`). The Phase 4 working
+tree is intentionally uncommitted; no Phase 4 push was performed.
+
+## Phase 4 implementation checklist
+
+### Repository audit and scope
+
+- [x] Re-read the roadmap, progress log, README, models, migrations, and tests.
+- [x] Confirmed no intelligence engine, relationship persistence, or duplicate
+  review API existed.
+- [x] Confirmed infrastructure/dependency tables existed but held only explicitly
+  development-only seed rows, not authoritative municipal data.
+- [x] Chose an explainable, human-reviewable scope instead of fabricating datasets.
+
+### Correlation and duplicate detection
+
+- [x] Add deterministic spatial, temporal, category, text, and severity signals.
+- [x] Add configurable radius, window, text, confidence, candidate, and impact limits.
+- [x] Separate duplicate candidates from related candidates.
+- [x] Return per-signal weights, contributions, explanations, reasons, and confidence.
+- [x] Never auto-merge, delete, or mutate incidents from suggestions.
+- [x] Preserve Citizen visibility in candidate retrieval and relationship listing.
+- [x] Avoid excessive queries with bounded PostGIS candidate retrieval and limits.
+
+### Persistence and review
+
+- [x] Add `incident_relationships` with canonical ordering, unique pair/type,
+  confidence range, self-link CHECK, FKs, indexes, and timestamps.
+- [x] Add `0006` migration, RLS, SELECT-only authenticated grant, and trigger.
+- [x] Normalize early Phase 4 CHECK names with `0007`/`0008`.
+- [x] Add WORKER/ADMIN review endpoint with idempotent upsert by canonical pair/type.
+- [x] Persist reviewer, review time, confidence, signals, and note.
+- [x] Reject self-links and non-staff review; map concurrent conflicts to 409.
+
+### Infrastructure and impact foundation
+
+- [x] Add authenticated active-infrastructure reference endpoint.
+- [x] Use PostGIS spatial predicates and geography distance with WGS84 handling.
+- [x] Return nearby asset distance and dependency-link count.
+- [x] Traverse dependency edges breadth-first with depth/node bounds and decaying confidence.
+- [x] Label root proximity as `GEOSPATIAL_ASSOCIATION` and graph paths as
+  `INFERRED_POTENTIAL`; state that neither is observed damage.
+- [x] Document seed-data provenance and missing authoritative asset feed.
+
+### Frontend
+
+- [x] Add typed intelligence API client, types, and formatting helpers.
+- [x] Add an incident-detail intelligence panel without removing existing UI.
+- [x] Show duplicate and related suggestions with confidence, reasons, signals,
+  candidate links, and explicit “decision support” framing.
+- [x] Add staff-only confirm/dismiss review controls and reviewed-relationship cards.
+- [x] Show infrastructure proximity and impact paths with type/confidence/rationale.
+- [x] Add loading, error/retry, empty, threshold, and limitation states.
+- [x] Add API/helper tests for serialization, formatting, and inference labels.
+
+### Verification and documentation
+
+- [x] Add backend unit/API/constraint/migration tests for intelligence.
+- [x] Run full backend and frontend suites, typecheck, lint, and production build.
+- [x] Run live API validation with disposable real users, assets, and dependency data.
+- [x] Run live headless-Chrome validation of the rendered intelligence panel.
+- [x] Clean up all disposable rows, users, assets, edges, and relationships.
+- [x] Update README, backend/frontend READMEs, auth/RLS docs, and intelligence docs.
 
 ## Phase 3 implementation checklist
 
@@ -70,6 +134,49 @@ The working tree is intentionally uncommitted. No push was performed.
 - [x] Run typecheck, lint, Vitest, build, pytest, Alembic checks.
 - [x] Run live storage/map/browser validation and clean up test data.
 - [x] Update README, API docs, spatial/evidence docs, env docs, and acceptance report.
+
+## Phase 4 scope implemented
+
+### Intelligence API
+
+- `GET /api/v1/incidents/{id}/intelligence` returns duplicate and related
+  candidates, visible reviewed relationships, nearby infrastructure,
+  dependency-aware potential impacts, thresholds, and limitations.
+- Confidence combines distance (0.32), time (0.18), text (0.23), category
+  (0.13), severity (0.04), and lifecycle status (0.10). Duplicate classification additionally requires
+  the duplicate radius/window, compatible category, text threshold, and
+  confidence threshold.
+- Text matching is normalized token Jaccard plus sequence similarity. It is
+  lexical and intentionally explainable, not an NLP/embedding model.
+- `GET /api/v1/infrastructure/assets` exposes active assets to authenticated
+  users. No external municipal feed is configured; repository seed assets are
+  development-only.
+- `GET`/`POST /api/v1/incidents/{id}/relationships` lists visible reviewed
+  relationships and lets WORKER/ADMIN users confirm or dismiss a suggestion.
+  Pairs are canonical/unique; re-review updates the same row.
+- Impact depth `0` is a spatial association; graph-derived entries are
+  `INFERRED_POTENTIAL`, decay in confidence, and explicitly disclaim observed
+  damage/outage/cascade prediction.
+
+### Persistence and security
+
+- `incident_relationships` stores a canonical incident pair, relationship type,
+  status, confidence, signals, note, reviewer, and timestamps.
+- Self-relationships are rejected in the API and database.
+- RLS limits reads to staff or a pair owned by the caller; `authenticated` has
+  SELECT only. Relationship writes remain backend-only.
+- Citizens cannot infer another Citizen's incident through candidates,
+  intelligence, relationships, or opaque 404 behavior.
+- Concurrent review conflicts return `409 relationship_conflict`.
+
+### Frontend
+
+- Incident detail includes an intelligence panel with decision-support framing,
+  duplicate/related candidate cards, confidence/reasons/signal details,
+  staff-reviewed relationship cards, nearby infrastructure, potential impact
+  paths, thresholds, and data limitations.
+- Staff see confirm/dismiss review controls; Citizens see read-only context.
+- Existing report, lifecycle, map, and evidence flows are preserved.
 
 ## Phase 2 scope implemented
 
@@ -137,32 +244,42 @@ cd ..
 
 Latest recorded results:
 
-- Backend: **112 passed**.
-- Alembic: live revision `0005_map_evidence_storage`; `alembic check` reports
+- Backend: **122 passed**.
+- Alembic: live revision `0008_confidence_check_name`; `alembic check` reports
   **No new upgrade operations detected** (custom PostGIS type warnings only).
-- Frontend: typecheck, ESLint, **44 tests** (13 files), and production build
+- Frontend: typecheck, ESLint, **51 tests** (15 files), and production build
   pass.
-- `scripts/verify.ps1` passes.
+- `scripts/verify.ps1` passes (run after the Phase 4 verification suite).
 
 ## Live validation evidence
 
 - Live PostgreSQL 17.12 + PostGIS 3.3.7, all migrations applied through
-  `0005_map_evidence_storage`.
-- 14 application tables, 18 application RLS policies, 8 triggers, 14 foreign
-  keys, 5 unique constraints, 4 GIST indexes. RLS enabled on all 14 application
-  tables. New evidence MIME/size constraints and composite index present.
+  `0008_confidence_check_name`.
+- 15 application tables, 19 application RLS policies, 9 triggers, 17 foreign
+  keys, 6 unique constraints, 4 GIST indexes. RLS enabled on all 15 application
+  tables. Evidence MIME/size constraints, the evidence composite index, and
+  normalized Phase 4 relationship CHECKs are present.
 - Private `incident-evidence` Storage bucket exists with `public=false`,
   10 MB limit, and JPEG/PNG/WebP allowlist.
 - ACLs after `0005`: `anon` has no application-table privileges;
-  `authenticated` has SELECT on 14 tables, INSERT on incidents and scenarios,
-  column UPDATE only on `profiles.full_name/phone`, and no direct INSERT on
-  `incident_evidence`.
+  `authenticated` has SELECT on all 15 application tables, INSERT on incidents
+  and scenarios, column UPDATE only on `profiles.full_name/phone`, and no direct
+  INSERT on `incident_evidence` or `incident_relationships`.
 - Real isolated Auth users completed sign-in with ES256 tokens, backend JWKS
   verification, profile provisioning, `/auth/me`, role changes, and cleanup.
 - Real API validation covered report creation, Citizen scoping, Worker/Admin
   visibility, text/bbox filters, edit locking after acknowledgement, department
   assignment, full lifecycle, history, invalid transitions, and 403/404/409
   boundaries.
+- Phase 4 live API validation (disposable real users, assets, dependency edge):
+  duplicate and related suggestions with explanations, cross-Citizen candidate
+  privacy, staff-only review, relationship persistence/uniqueness, citizen
+  relationship hiding, opaque 404 intelligence access, PostGIS asset proximity,
+  inferred-impact labeling, authenticated asset listing, and cleanup to zero.
+- Phase 4 live headless-Chrome validation:
+  signed-in incident detail rendered the intelligence panel, duplicate
+  candidate, explanation details, decision-support label, reviewed/empty
+  infrastructure/impact states, thresholds, and limitations.
 - Phase 3 live API validation (real users, real Storage):
   bbox query, upload, server-side MIME detection, filename sanitization,
   server-generated path, detail/list metadata, signed URL bytes, direct storage
@@ -177,8 +294,8 @@ Latest recorded results:
 - Transactional real-role RLS validation confirmed that `incident_status_events`
   is visible to the reporter and staff, and hidden from another Citizen.
 - All disposable Auth users, profiles, incidents, status events, evidence rows,
-  Storage objects, and the temporary department were deleted. Remaining counts
-  were zero.
+  Storage objects, relationships, infrastructure assets, dependency edges, and
+  temporary departments were deleted. Remaining counts were zero.
 
 ## Known boundaries
 
@@ -194,9 +311,16 @@ Latest recorded results:
   deny-all (verified), which is stricter than scoped reads; signed URL issuance
   remains backend-authorized. See `backend/docs/evidence.md` for the dashboard
   policy SQL and security note.
-- No duplicate detection, risk scoring, dependency analysis, scenario simulation,
-  notification delivery, admin dashboard, or department management.
-- Departments must be seeded or provisioned out of band.
+- Correlation is lexical/heuristic and human-reviewed; there is no NLP or
+  embedding model, automatic merge, or automatic incident mutation.
+- Infrastructure proximity is a spatial association, and dependency paths are
+  inferred graph associations, not observed damage/outage or a calibrated
+  cascade prediction.
+- The repository has no authoritative municipal asset feed; infrastructure rows
+  are development seed data unless a deployment loads its own dataset.
+- No risk scoring/H3 engine, scenario simulation, notification delivery, admin
+  dashboard, or department management.
+- Departments and authoritative infrastructure data must be loaded out of band.
 - OSM public raster tiles are used for this phase; production tile usage must be
   reviewed separately.
 - No commit or push was made. Environment files remain untracked/ignored.
@@ -205,7 +329,9 @@ Latest recorded results:
 
 1. Apply the documented `storage.objects` visibility policy through a role that
    owns the hosted table, then verify direct signed-URL-free access.
-2. Duplicate detection and incident clusters using PostGIS distance/time windows.
-3. Infrastructure dependency and risk engines.
-4. Scenario simulation and notification delivery.
+2. Authoritative municipal asset/dataset ingestion with provenance and freshness.
+3. Risk scoring and H3 risk cells built on incident/infrastructure history.
+4. Scenario simulation, dependency optimization, and notification delivery.
 5. Admin operations UI, department management, and audit export.
+6. Re-run public signup -> email confirmation -> sign-in after the Supabase
+   email rate limit resets.

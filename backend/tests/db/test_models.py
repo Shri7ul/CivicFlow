@@ -29,6 +29,7 @@ EXPECTED_TABLES = {
     "incidents",
     "incident_evidence",
     "incident_status_events",
+    "incident_relationships",
     "incident_clusters",
     "incident_cluster_members",
     "infrastructure_assets",

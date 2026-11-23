@@ -133,14 +133,18 @@ backend, never directly by a browser session.
 Migration `0005_map_evidence_storage.py` revokes `INSERT` on
 `incident_evidence` from both `authenticated` and `anon`, leaving
 `authenticated` with `SELECT` only. Evidence writes now go exclusively through
-the backend service role. After `0005`, authenticated has `SELECT` on all 14
-tables, `INSERT` on `incidents` and `scenarios`, and column UPDATE on
-`profiles.full_name/phone` only.
+the backend service role. Migration `0006_incident_intelligence.py` applies the
+same rule to `incident_relationships`: `authenticated` receives `SELECT` only,
+`anon` receives nothing, and review writes stay backend-only. After `0008`,
+authenticated has `SELECT` on all 15 application tables, `INSERT` on `incidents`
+and `scenarios`, and column UPDATE on `profiles.full_name/phone` only.
 
 `anon` has no application-table privileges. `service_role` is intentionally
 unchanged because it is the trusted server identity. RLS remains enabled on all
-14 application tables after `0005`, and the column grants work with the
-corresponding policies.
+15 application tables after `0008`, and the column grants work with the
+corresponding policies. Relationship visibility requires staff access or a pair
+owned by the caller; citizen relationship listings additionally filter in the
+service layer.
 
 ### Private Storage
 
@@ -210,19 +214,19 @@ $env:ALEMBIC_DATABASE_URL = "postgresql+psycopg://user:pass@localhost:5432/civic
 
 The configured Supabase project was validated live on 2026-11-23:
 
-- Alembic upgraded an empty project to `0005_map_evidence_storage`.
+- Alembic upgraded the project through `0008_confidence_check_name`.
 - PostgreSQL 17.12 was reachable over TLS.
 - PostGIS 3.3.7 is installed in `public`.
-- All 14 application tables, 4 GIST indexes, 18 application policies, 8
-  triggers, 14 foreign keys, and 5 unique constraints exist. The private
+- All 15 application tables, 4 GIST indexes, 19 application policies, 9
+  triggers, 17 foreign keys, and 6 unique constraints exist. The private
   `incident-evidence` bucket exists with a 10 MB limit and image allowlist; no
   `storage.objects` policy exists for it on this hosted project.
 - RLS was exercised transactionally with synthetic JWT claims for anonymous,
   Citizen, Worker, and Admin identities. All test rows were rolled back.
-- ACL counts were verified after `0005`: anonymous table privileges are zero;
-  authenticated has SELECT on 14 tables, INSERT on 2, column UPDATE on the two
-  profile fields, and SELECT only on `incident_evidence`; `service_role` was
-  not changed. A transactional real-role test confirmed that Citizen sees only
+- ACL counts were verified after `0008`: anonymous table privileges are zero;
+  authenticated has SELECT on all 15 application tables, INSERT on 2, column
+  UPDATE on the two profile fields, and SELECT only on `incident_evidence` and
+  `incident_relationships`; `service_role` was not changed. A transactional real-role test confirmed that Citizen sees only
   lifecycle events for their own incident, another Citizen sees none, and
   Worker sees the event.
 - Isolated real Auth users were created through the Admin API, signed in, and
@@ -235,34 +239,31 @@ The configured Supabase project was validated live on 2026-11-23:
 - Phase 3 live validation confirmed private Storage upload, signed URL download,
   direct-read denial, cross-Citizen denial, and cleanup of every disposable user,
   profile, incident, status event, evidence row, and Storage object.
+- Phase 4 live validation confirmed duplicate suggestions, cross-Citizen
+  candidate/relationship privacy, staff-only review, unique relationship
+  persistence, opaque 404s, infrastructure proximity, inferred-impact labeling,
+  and cleanup of all disposable relationships, assets, and edges.
 - The profile privilege trigger rejected direct Citizen and Admin role and
   activation changes.
 - `alembic check` reports no new upgrade operations.
 
-Not executed live:
+Live boundaries and known low-risk findings:
 
-- Supabase signup, email confirmation, password sign-in, access-token issuance,
-  profile provisioning, and role changes for a real user. There were no Auth
-  users, and creating disposable users requires explicit approval.
-- ES256 verification of a real Supabase-issued token. ES256 verification is
-  covered by a generated-key unit test, and the live JWKS endpoint advertises
-  one ES256 signing key.
+- Public self-service signup could not complete because the project returned
+  HTTP 429 for the email send rate limit. Confirmation enforcement was verified
+  with an unconfirmed Admin-created user; no inbox confirmation link was read.
+- Supabase default ACLs on some older tables still carry inherited `TRUNCATE`,
+  `REFERENCES`, and `TRIGGER` privileges for `service_role`; `0003` removed them
+  from `anon`/`authenticated`. RLS does not protect `TRUNCATE`, although
+  PostgREST does not expose it.
+- Some older PostgreSQL CHECK constraint names remain double-prefixed by the
+  project naming convention. The new Phase 4 confidence/side constraints are
+  normalized by `0007`/`0008`; the older ones are present and enforced, and only
+  their names differ from model metadata.
+- Two older enum-backed VARCHAR columns are one character wider than the model
+  enum maximum (`dependency_type` 12 vs 11, `risk_entity_type` 21 vs 20). The
+  wider storage is safe.
 
-Known low-risk findings:
-
-- Supabase default ACLs leave `TRUNCATE`, `REFERENCES`, and `TRIGGER` on
-  application tables for `anon`/`authenticated`. RLS does not protect
-  `TRUNCATE`, although PostgREST does not expose it. A future least-privilege
-  migration should revoke those privileges.
-- PostgreSQL CHECK constraint names were double-prefixed by the project naming
-  convention (for example
-  `ck_dependency_edges_ck_dependency_edges_dependency_type`). The constraints
-  are present and enforced; only their names differ from the model metadata.
-- Two enum-backed VARCHAR columns are one character wider in the migration
-  than the model enum maximum (`dependency_type` 12 vs 11,
-  `risk_entity_type` 21 vs 20). The wider storage is safe, and the Alembic type
-  comparator treats a wider VARCHAR as compatible while still flagging columns
-  that are too short.
-
-Do not describe those unexecuted live checks as passed until they have actually
-run against the Supabase project.
+Do not describe unexecuted checks as passed. The Phase 4 live and browser
+results above were executed against the configured Supabase project with
+disposable users and cleaned up afterward.

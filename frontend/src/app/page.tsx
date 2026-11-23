@@ -36,6 +36,16 @@ const foundationItems = [
       "Validated JPEG/PNG/WebP uploads, private Supabase Storage, and short-lived signed previews.",
   },
   {
+    title: "Explainable incident intelligence",
+    description:
+      "Deterministic spatial, temporal, category, text, and severity signals with reasons, confidence, and explicit limitations.",
+  },
+  {
+    title: "Infrastructure and impact context",
+    description:
+      "PostGIS asset proximity and dependency-aware impact foundations that distinguish spatial association from inferred potential.",
+  },
+  {
     title: "Supabase authentication",
     description:
       "Signed ES256 JWT verification with JWKS rotation, expiry, issuer, audience, and claim validation.",
@@ -48,35 +58,34 @@ const foundationItems = [
 ] as const;
 
 const upcomingItems = [
-  "Duplicate detection via spatial and temporal proximity",
   "H3 risk cell engine",
-  "Dependency graph analysis",
   "Scenario simulation and optimization",
   "Notification delivery",
   "Admin and department management",
+  "Authoritative municipal asset/dataset ingestion",
 ] as const;
 
 const architectureCards = [
   {
     label: "Interface",
     title: "Next.js frontend",
-    status: "Map + evidence",
+    status: "Incidents + map",
     description:
-      "Protected incident queue, MapLibre map with clustering, report location picker, and private evidence gallery.",
+      "Protected incident queue, MapLibre map with clustering, private evidence gallery, and reviewable intelligence suggestions.",
     tags: ["Next.js", "MapLibre", "Supabase", "TypeScript"],
   },
   {
     label: "Service",
     title: "FastAPI backend",
-    status: "Spatial + storage",
+    status: "Intelligence + spatial",
     description:
-      "Verified JWTs, scoped viewport queries, lifecycle transitions, server-validated evidence, and signed Storage URLs.",
+      "Verified JWTs, scoped viewport queries, lifecycle transitions, server-validated evidence, signed Storage URLs, and explainable intelligence APIs.",
     tags: ["FastAPI", "PostGIS", "RBAC", "Storage"],
   },
   {
     label: "Data",
     title: "PostgreSQL + PostGIS",
-    status: "14 tables",
+    status: "15 tables",
     description:
       "Alembic-managed schema, PostGIS geography and GIST indexes, RLS policies, and safe seed data.",
     tags: ["Supabase", "PostgreSQL", "PostGIS", "Alembic"],
@@ -153,7 +162,7 @@ export default function HomePage() {
                 href="#status"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Explore Phase 3 status
+                Explore Phase 4 status
                 <ArrowIcon />
               </a>
               <a
@@ -170,7 +179,7 @@ export default function HomePage() {
                   Phase
                 </dt>
                 <dd className="mt-1.5 text-sm font-medium text-slate-200">
-                  3 · Map + evidence
+                  4 · Intelligence
                 </dd>
               </div>
               <div>
@@ -220,8 +229,9 @@ export default function HomePage() {
                 </h2>
               </div>
               <p className="max-w-md text-sm leading-6 text-slate-500">
-                Phase 3 adds spatial exploration, native clustering, and private
-                photo evidence while preserving the Phase 2 incident workflow.
+                Phase 4 adds explainable correlation, duplicate suggestions, and
+                infrastructure context while preserving the existing incident,
+                spatial, and private-evidence workflows.
               </p>
             </div>
 
@@ -276,7 +286,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <p className="mt-6 rounded-lg border border-amber-400/10 bg-amber-400/[0.03] px-3.5 py-3 text-xs leading-5 text-amber-200/60">
-                  These modules remain out of scope for the current Phase 3 core.
+                  These modules remain out of scope for the current Phase 4 core.
                   Nothing on this list is available in the current application.
                 </p>
               </div>
@@ -300,8 +310,8 @@ export default function HomePage() {
               A clean foundation for civic intelligence
             </h2>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              Phase 3 keeps the authentication, RBAC, RLS, and incident foundation
-              intact while adding spatial exploration and private evidence.
+              Phase 4 keeps the authentication, RBAC, RLS, spatial, evidence, and
+              incident foundation intact while adding reviewable intelligence.
             </p>
           </div>
 
@@ -342,7 +352,8 @@ export default function HomePage() {
           <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.04] to-transparent p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-sm font-medium text-slate-200">
-                Phase 3 spatial operations and private evidence are live.
+                Phase 4 incident intelligence is live alongside spatial operations
+                and private evidence.
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
                 Health API:{" "}

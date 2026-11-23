@@ -109,9 +109,15 @@ transitions. RLS is enabled with a SELECT policy for the reporter, Workers, and
 Admins. `anon` receives no grant; `authenticated` receives `SELECT` only. The
 backend writes history with its trusted database connection.
 
-## Not included in this goal
+## Related capabilities
 
-Evidence storage/upload, duplicate detection and clustering, MapLibre rendering,
-risk scoring, infrastructure dependency analysis, scenario simulation, and
-notification delivery remain future work. The current frontend uses validated
-coordinate entry and does not claim a map view.
+Private evidence upload, the MapLibre viewport map, and Phase 4 incident
+intelligence are documented separately:
+
+- [evidence.md](evidence.md) for upload/signed-preview security.
+- [spatial.md](spatial.md) for viewport queries and coordinate handling.
+- [intelligence.md](intelligence.md) for duplicate/related suggestions,
+  reviewable relationships, infrastructure proximity, and impact foundations.
+
+Risk scoring/H3 cells, scenario simulation, notification delivery, and
+authoritative municipal dataset ingestion remain future work.

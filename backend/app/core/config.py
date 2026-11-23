@@ -71,6 +71,27 @@ class Settings(BaseSettings):
     )
     evidence_max_files_per_upload: int = Field(default=5, ge=1, le=10)
 
+    # Phase 4 explainable incident intelligence
+    intelligence_duplicate_radius_m: int = Field(default=250, ge=10, le=5000)
+    intelligence_related_radius_m: int = Field(default=1500, ge=50, le=20000)
+    intelligence_duplicate_window_hours: int = Field(default=24, ge=1, le=168)
+    intelligence_related_window_hours: int = Field(default=72, ge=1, le=720)
+    intelligence_candidate_limit: int = Field(default=100, ge=1, le=500)
+    intelligence_duplicate_text_threshold: float = Field(
+        default=0.30, ge=0.0, le=1.0
+    )
+    intelligence_duplicate_confidence_threshold: float = Field(
+        default=0.55, ge=0.0, le=1.0
+    )
+    intelligence_related_confidence_threshold: float = Field(
+        default=0.42, ge=0.0, le=1.0
+    )
+    intelligence_infrastructure_radius_m: int = Field(
+        default=1000, ge=50, le=10000
+    )
+    intelligence_impact_depth: int = Field(default=2, ge=1, le=4)
+    intelligence_impact_limit: int = Field(default=20, ge=1, le=100)
+
     @field_validator("app_name")
     @classmethod
     def _validate_app_name(cls, value: str) -> str:
@@ -214,6 +235,23 @@ class Settings(BaseSettings):
             if origin not in origins:
                 origins.append(origin)
         return origins
+
+    @model_validator(mode="after")
+    def _validate_intelligence_bounds(self) -> "Settings":
+        if self.intelligence_related_radius_m < self.intelligence_duplicate_radius_m:
+            raise ValueError(
+                "INTELLIGENCE_RELATED_RADIUS_M must be >= "
+                "INTELLIGENCE_DUPLICATE_RADIUS_M"
+            )
+        if (
+            self.intelligence_related_window_hours
+            < self.intelligence_duplicate_window_hours
+        ):
+            raise ValueError(
+                "INTELLIGENCE_RELATED_WINDOW_HOURS must be >= "
+                "INTELLIGENCE_DUPLICATE_WINDOW_HOURS"
+            )
+        return self
 
     @model_validator(mode="after")
     def _validate_security(self) -> "Settings":

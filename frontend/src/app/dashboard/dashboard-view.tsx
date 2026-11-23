@@ -15,10 +15,12 @@ const roleCapabilities: Record<string, readonly string[]> = {
     "Review the citywide incident queue",
     "Assign reports to municipal departments",
     "Advance incidents through the response lifecycle",
+    "Review duplicate and related-incident suggestions",
   ],
   ADMIN: [
     "Oversee the citywide incident queue",
     "Use the same audited response workflow as workers",
+    "Review explainable intelligence suggestions and relationships",
     "Manage application roles and privileged access",
   ],
 };
@@ -37,7 +39,7 @@ export function DashboardView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-            Phase 3 incident operations
+            Phase 4 incident intelligence
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Welcome, {profile.full_name}

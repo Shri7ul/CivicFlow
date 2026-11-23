@@ -25,6 +25,36 @@ def test_defaults_are_local_development_safe() -> None:
     assert settings.service_name == "CivicFlow API"
 
 
+def test_intelligence_defaults_are_bounded_and_explainable() -> None:
+    settings = Settings(_env_file=None, app_env="development")
+
+    assert settings.intelligence_duplicate_radius_m == 250
+    assert settings.intelligence_related_radius_m == 1500
+    assert settings.intelligence_duplicate_window_hours == 24
+    assert settings.intelligence_related_window_hours == 72
+    assert settings.intelligence_duplicate_text_threshold == 0.30
+    assert settings.intelligence_duplicate_confidence_threshold == 0.55
+    assert settings.intelligence_related_confidence_threshold == 0.42
+    assert settings.intelligence_infrastructure_radius_m == 1000
+    assert settings.intelligence_impact_depth == 2
+    assert settings.intelligence_impact_limit == 20
+
+
+def test_intelligence_related_bounds_must_cover_duplicate_bounds() -> None:
+    with pytest.raises(ValidationError, match="RELATED_RADIUS_M"):
+        Settings(
+            _env_file=None,
+            intelligence_duplicate_radius_m=500,
+            intelligence_related_radius_m=100,
+        )
+    with pytest.raises(ValidationError, match="RELATED_WINDOW_HOURS"):
+        Settings(
+            _env_file=None,
+            intelligence_duplicate_window_hours=72,
+            intelligence_related_window_hours=24,
+        )
+
+
 def test_cors_origins_accept_comma_separated_values() -> None:
     settings = Settings(
         _env_file=None,

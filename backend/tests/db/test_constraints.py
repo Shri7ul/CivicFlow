@@ -25,10 +25,13 @@ from app.models import (
     IncidentCluster,
     IncidentClusterMember,
     IncidentEvidence,
+    IncidentRelationship,
     IncidentSeverity,
     IncidentStatus,
     InfrastructureAsset,
     Profile,
+    RelationshipStatus,
+    RelationshipType,
     RiskCell,
     Role,
 )
@@ -330,5 +333,52 @@ def test_risk_cell_ranges_and_unique_h3(db_session: Session) -> None:
         )
     )
     with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+
+
+def test_incident_relationship_constraints_and_unique_pair(
+    db_session: Session,
+) -> None:
+    reporter = _profile(db_session)
+    db_session.commit()
+    first = _incident(db_session, reporter)
+    second = _incident(db_session, reporter)
+    db_session.commit()
+
+    relationship = IncidentRelationship(
+        incident_a_id=min(first.id, second.id, key=str),
+        incident_b_id=max(first.id, second.id, key=str),
+        relationship_type=RelationshipType.DUPLICATE,
+        status=RelationshipStatus.CONFIRMED,
+        confidence=Decimal("0.900"),
+        signals={"distance_m": 10},
+    )
+    db_session.add(relationship)
+    db_session.commit()
+
+    with pytest.raises(IntegrityError):
+        db_session.add(
+            IncidentRelationship(
+                incident_a_id=relationship.incident_a_id,
+                incident_b_id=relationship.incident_b_id,
+                relationship_type=RelationshipType.DUPLICATE,
+                status=RelationshipStatus.DISMISSED,
+                confidence=Decimal("0.400"),
+            )
+        )
+        db_session.commit()
+    db_session.rollback()
+
+    with pytest.raises(IntegrityError):
+        db_session.add(
+            IncidentRelationship(
+                incident_a_id=first.id,
+                incident_b_id=first.id,
+                relationship_type=RelationshipType.RELATED,
+                status=RelationshipStatus.CONFIRMED,
+                confidence=Decimal("0.500"),
+            )
+        )
         db_session.commit()
     db_session.rollback()
