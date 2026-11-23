@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "civicflow-api"
-version = "0.4.0"
+version = "0.5.0"
 description = "CivicFlow API — Urban Impact & Response Intelligence"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,6 +19,7 @@ dependencies = [
     "PyJWT[crypto]>=2.9,<3.0",
     "httpx>=0.27,<1.0",
     "python-multipart>=0.0.9,<1.0",
+    "h3>=4.1,<5.0",
 ]
 
 [project.optional-dependencies]

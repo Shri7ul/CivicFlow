@@ -17,16 +17,23 @@ from app.models.enums import (
     IncidentStatus,
     RelationshipStatus,
     RelationshipType,
+    RiskCategory,
     RiskEntityType,
     RiskLevel,
     Role,
     ScenarioStatus,
+    TrendDirection,
 )
 from app.models.incident import Incident, IncidentEvidence, IncidentStatusEvent
 from app.models.infrastructure import DependencyEdge, InfrastructureAsset
 from app.models.intelligence import IncidentRelationship
 from app.models.profile import Profile
-from app.models.risk import RiskAssessment, RiskCell
+from app.models.risk import (
+    RiskAssessment,
+    RiskCell,
+    RiskCellSnapshot,
+    RiskModelRun,
+)
 from app.models.scenario import Scenario, ScenarioResult
 
 __all__ = [
@@ -48,8 +55,11 @@ __all__ = [
     "InfrastructureAsset",
     "Profile",
     "RiskAssessment",
+    "RiskCategory",
     "RiskCell",
+    "RiskCellSnapshot",
     "RiskEntityType",
+    "RiskModelRun",
     "RelationshipStatus",
     "RelationshipType",
     "RiskLevel",
@@ -58,4 +68,5 @@ __all__ = [
     "Scenario",
     "ScenarioResult",
     "ScenarioStatus",
+    "TrendDirection",
 ]

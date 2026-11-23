@@ -35,6 +35,8 @@ EXPECTED_TABLES = {
     "infrastructure_assets",
     "dependency_edges",
     "risk_cells",
+    "risk_model_runs",
+    "risk_cell_snapshots",
     "risk_assessments",
     "scenarios",
     "scenario_results",

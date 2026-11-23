@@ -46,6 +46,16 @@ const foundationItems = [
       "PostGIS asset proximity and dependency-aware impact foundations that distinguish spatial association from inferred potential.",
   },
   {
+    title: "H3 urban risk cells",
+    description:
+      "Versioned, configuration-driven risk bands with explainable severity, density, recency, status, category, and exposure factors.",
+  },
+  {
+    title: "Risk map and trends",
+    description:
+      "MapLibre H3 polygons, resolution/window controls, previous-period trends, confidence, and staff-only persistent snapshots.",
+  },
+  {
     title: "Supabase authentication",
     description:
       "Signed ES256 JWT verification with JWKS rotation, expiry, issuer, audience, and claim validation.",
@@ -58,7 +68,6 @@ const foundationItems = [
 ] as const;
 
 const upcomingItems = [
-  "H3 risk cell engine",
   "Scenario simulation and optimization",
   "Notification delivery",
   "Admin and department management",
@@ -69,25 +78,25 @@ const architectureCards = [
   {
     label: "Interface",
     title: "Next.js frontend",
-    status: "Incidents + map",
+    status: "Risk + incidents",
     description:
-      "Protected incident queue, MapLibre map with clustering, private evidence gallery, and reviewable intelligence suggestions.",
-    tags: ["Next.js", "MapLibre", "Supabase", "TypeScript"],
+      "Protected incident queue, MapLibre incident and H3 risk maps, private evidence gallery, and reviewable intelligence suggestions.",
+    tags: ["Next.js", "MapLibre", "H3", "TypeScript"],
   },
   {
     label: "Service",
     title: "FastAPI backend",
-    status: "Intelligence + spatial",
+    status: "Risk engine + APIs",
     description:
-      "Verified JWTs, scoped viewport queries, lifecycle transitions, server-validated evidence, signed Storage URLs, and explainable intelligence APIs.",
-    tags: ["FastAPI", "PostGIS", "RBAC", "Storage"],
+      "Verified JWTs, bounded H3 aggregation, versioned scoring, lifecycle transitions, signed Storage URLs, and explainable intelligence APIs.",
+    tags: ["FastAPI", "H3", "PostGIS", "RBAC"],
   },
   {
     label: "Data",
     title: "PostgreSQL + PostGIS",
-    status: "15 tables",
+    status: "17 tables",
     description:
-      "Alembic-managed schema, PostGIS geography and GIST indexes, RLS policies, and safe seed data.",
+      "Alembic-managed schema, PostGIS geography and GIST indexes, RLS policies, risk snapshots, and safe seed data.",
     tags: ["Supabase", "PostgreSQL", "PostGIS", "Alembic"],
   },
 ] as const;
@@ -162,7 +171,7 @@ export default function HomePage() {
                 href="#status"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Explore Phase 4 status
+                Explore Phase 5 status
                 <ArrowIcon />
               </a>
               <a
@@ -179,7 +188,7 @@ export default function HomePage() {
                   Phase
                 </dt>
                 <dd className="mt-1.5 text-sm font-medium text-slate-200">
-                  4 · Intelligence
+                  5 · Urban risk
                 </dd>
               </div>
               <div>
@@ -229,9 +238,9 @@ export default function HomePage() {
                 </h2>
               </div>
               <p className="max-w-md text-sm leading-6 text-slate-500">
-                Phase 4 adds explainable correlation, duplicate suggestions, and
-                infrastructure context while preserving the existing incident,
-                spatial, and private-evidence workflows.
+                Phase 5 adds explainable H3 risk cells, temporal trends, and
+                infrastructure exposure while preserving the existing incident,
+                spatial, evidence, and intelligence workflows.
               </p>
             </div>
 
@@ -286,7 +295,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <p className="mt-6 rounded-lg border border-amber-400/10 bg-amber-400/[0.03] px-3.5 py-3 text-xs leading-5 text-amber-200/60">
-                  These modules remain out of scope for the current Phase 4 core.
+                  These modules remain out of scope for the current Phase 5 core.
                   Nothing on this list is available in the current application.
                 </p>
               </div>
@@ -310,8 +319,8 @@ export default function HomePage() {
               A clean foundation for civic intelligence
             </h2>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              Phase 4 keeps the authentication, RBAC, RLS, spatial, evidence, and
-              incident foundation intact while adding reviewable intelligence.
+              Phase 5 keeps authentication, RBAC, RLS, spatial, evidence, and
+              incident foundations intact while adding explainable urban risk.
             </p>
           </div>
 
@@ -352,8 +361,8 @@ export default function HomePage() {
           <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.04] to-transparent p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-sm font-medium text-slate-200">
-                Phase 4 incident intelligence is live alongside spatial operations
-                and private evidence.
+                Phase 5 urban risk intelligence is live alongside incident,
+                spatial, and private-evidence operations.
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
                 Health API:{" "}

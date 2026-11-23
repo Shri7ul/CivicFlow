@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0008_confidence_check_name"
+    assert version == "0010_risk_factor_default"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -115,6 +115,8 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0006_incident_intelligence.py",
         "0007_relationship_checks.py",
         "0008_confidence_check_name.py",
+        "0009_urban_risk_engine.py",
+        "0010_risk_factor_default.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -142,3 +144,11 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "RENAME CONSTRAINT" in checks
     final_check = versions[7].read_text(encoding="utf-8")
     assert "confidence_range" in final_check
+    risk = versions[8].read_text(encoding="utf-8")
+    assert "risk_model_runs" in risk
+    assert "risk_cell_snapshots" in risk
+    assert "risk_cell_snapshots_read_staff" in risk
+    assert "GRANT SELECT ON TABLE public." in risk
+    default_fix = versions[9].read_text(encoding="utf-8")
+    assert "factor_contributions" in default_fix
+    assert "server_default" in default_fix

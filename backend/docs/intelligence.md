@@ -170,6 +170,8 @@ details, empty states, thresholds, and limitations.
 - No NLP/embedding model; text matching is lexical.
 - No automatic merging, cluster assignment, or incident deletion.
 - No authoritative municipal asset dataset or live sensor feed.
-- No risk scoring, H3 risk cells, scenario simulation, or notification delivery.
+- Phase 4 does not itself score risk or create H3 cells; Phase 5 provides the
+  separate risk engine. Scenario simulation and notification delivery remain
+  future work.
 - Dependency paths reflect seeded/loaded graph edges only.
 - Impact confidence is a transparent heuristic, not a calibrated probability.

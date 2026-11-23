@@ -92,6 +92,34 @@ class Settings(BaseSettings):
     intelligence_impact_depth: int = Field(default=2, ge=1, le=4)
     intelligence_impact_limit: int = Field(default=20, ge=1, le=100)
 
+    # Phase 5 urban risk engine
+    risk_model_version: str = "risk-v1"
+    risk_min_resolution: int = Field(default=7, ge=5, le=10)
+    risk_max_resolution: int = Field(default=10, ge=5, le=12)
+    risk_default_resolution: int = Field(default=8, ge=5, le=12)
+    risk_default_window_hours: int = Field(default=168, ge=1, le=8760)
+    risk_max_window_hours: int = Field(default=2160, ge=1, le=8760)
+    risk_recency_half_life_hours: int = Field(default=72, ge=1, le=720)
+    risk_density_saturation: int = Field(default=20, ge=1, le=1000)
+    risk_infrastructure_radius_m: int = Field(default=750, ge=50, le=5000)
+    risk_max_incidents: int = Field(default=20000, ge=100, le=100000)
+    risk_max_cells: int = Field(default=500, ge=10, le=2000)
+    risk_privacy_min_incidents: int = Field(default=3, ge=1, le=20)
+    risk_trend_min_incidents: int = Field(default=3, ge=2, le=20)
+    risk_weight_severity: float = Field(default=0.24, ge=0.0, le=1.0)
+    risk_weight_density: float = Field(default=0.13, ge=0.0, le=1.0)
+    risk_weight_spatial: float = Field(default=0.07, ge=0.0, le=1.0)
+    risk_weight_recency: float = Field(default=0.14, ge=0.0, le=1.0)
+    risk_weight_active: float = Field(default=0.08, ge=0.0, le=1.0)
+    risk_weight_category: float = Field(default=0.08, ge=0.0, le=1.0)
+    risk_weight_trend: float = Field(default=0.06, ge=0.0, le=1.0)
+    risk_weight_infrastructure: float = Field(default=0.14, ge=0.0, le=1.0)
+    risk_weight_dependency: float = Field(default=0.06, ge=0.0, le=1.0)
+    risk_threshold_low: float = Field(default=20.0, ge=0.0, le=100.0)
+    risk_threshold_moderate: float = Field(default=40.0, ge=0.0, le=100.0)
+    risk_threshold_high: float = Field(default=65.0, ge=0.0, le=100.0)
+    risk_threshold_critical: float = Field(default=85.0, ge=0.0, le=100.0)
+
     @field_validator("app_name")
     @classmethod
     def _validate_app_name(cls, value: str) -> str:
@@ -235,6 +263,46 @@ class Settings(BaseSettings):
             if origin not in origins:
                 origins.append(origin)
         return origins
+
+    @model_validator(mode="after")
+    def _validate_risk_bounds(self) -> "Settings":
+        if not self.risk_min_resolution <= self.risk_default_resolution <= self.risk_max_resolution:
+            raise ValueError(
+                "RISK_DEFAULT_RESOLUTION must be between RISK_MIN_RESOLUTION "
+                "and RISK_MAX_RESOLUTION"
+            )
+        if self.risk_default_window_hours > self.risk_max_window_hours:
+            raise ValueError(
+                "RISK_DEFAULT_WINDOW_HOURS must be <= RISK_MAX_WINDOW_HOURS"
+            )
+        weights = {
+            "severity": self.risk_weight_severity,
+            "density": self.risk_weight_density,
+            "spatial": self.risk_weight_spatial,
+            "recency": self.risk_weight_recency,
+            "active": self.risk_weight_active,
+            "category": self.risk_weight_category,
+            "trend": self.risk_weight_trend,
+            "infrastructure": self.risk_weight_infrastructure,
+            "dependency": self.risk_weight_dependency,
+        }
+        if abs(sum(weights.values()) - 1.0) > 1e-6:
+            raise ValueError("RISK_WEIGHT_* values must sum to 1.0")
+        thresholds = [
+            self.risk_threshold_low,
+            self.risk_threshold_moderate,
+            self.risk_threshold_high,
+            self.risk_threshold_critical,
+        ]
+        if thresholds != sorted(thresholds) or len(set(thresholds)) != len(thresholds):
+            raise ValueError(
+                "RISK_THRESHOLD_* values must be strictly ascending"
+            )
+        if thresholds[0] <= 0 or thresholds[-1] >= 100:
+            raise ValueError(
+                "RISK_THRESHOLD_* values must be within (0, 100)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _validate_intelligence_bounds(self) -> "Settings":

@@ -135,13 +135,18 @@ Migration `0005_map_evidence_storage.py` revokes `INSERT` on
 `authenticated` with `SELECT` only. Evidence writes now go exclusively through
 the backend service role. Migration `0006_incident_intelligence.py` applies the
 same rule to `incident_relationships`: `authenticated` receives `SELECT` only,
-`anon` receives nothing, and review writes stay backend-only. After `0008`,
-authenticated has `SELECT` on all 15 application tables, `INSERT` on `incidents`
-and `scenarios`, and column UPDATE on `profiles.full_name/phone` only.
+`anon` receives nothing, and review writes stay backend-only. Migration
+`0009_urban_risk_engine.py` adds `risk_model_runs` and `risk_cell_snapshots`
+with staff-only RLS (`is_worker_or_admin()`), SELECT-only authenticated grants,
+and no browser INSERT path. `0010_risk_factor_default.py` aligns the snapshot
+factor-contribution default with the JSON-array contract. After `0010`,
+authenticated has `SELECT` on all 17
+application tables, `INSERT` on `incidents` and `scenarios`, and column UPDATE
+on `profiles.full_name/phone` only.
 
 `anon` has no application-table privileges. `service_role` is intentionally
 unchanged because it is the trusted server identity. RLS remains enabled on all
-15 application tables after `0008`, and the column grants work with the
+17 application tables after `0010`, and the column grants work with the
 corresponding policies. Relationship visibility requires staff access or a pair
 owned by the caller; citizen relationship listings additionally filter in the
 service layer.
@@ -214,19 +219,19 @@ $env:ALEMBIC_DATABASE_URL = "postgresql+psycopg://user:pass@localhost:5432/civic
 
 The configured Supabase project was validated live on 2026-11-23:
 
-- Alembic upgraded the project through `0008_confidence_check_name`.
+- Alembic upgraded the project through `0010_risk_factor_default`.
 - PostgreSQL 17.12 was reachable over TLS.
 - PostGIS 3.3.7 is installed in `public`.
-- All 15 application tables, 4 GIST indexes, 19 application policies, 9
-  triggers, 17 foreign keys, and 6 unique constraints exist. The private
+- All 17 application tables, 5 GIST indexes, 21 application policies, 9
+  triggers, 19 foreign keys, and 7 unique constraints exist. The private
   `incident-evidence` bucket exists with a 10 MB limit and image allowlist; no
   `storage.objects` policy exists for it on this hosted project.
 - RLS was exercised transactionally with synthetic JWT claims for anonymous,
   Citizen, Worker, and Admin identities. All test rows were rolled back.
-- ACL counts were verified after `0008`: anonymous table privileges are zero;
-  authenticated has SELECT on all 15 application tables, INSERT on 2, column
-  UPDATE on the two profile fields, and SELECT only on `incident_evidence` and
-  `incident_relationships`; `service_role` was not changed. A transactional real-role test confirmed that Citizen sees only
+- ACL counts were verified after `0010`: anonymous table privileges are zero;
+  authenticated has SELECT on all 17 application tables, INSERT on 2, column
+  UPDATE on the two profile fields, and SELECT only on `incident_evidence`,
+  `incident_relationships`, `risk_model_runs`, and `risk_cell_snapshots`; `service_role` was not changed. A transactional real-role test confirmed that Citizen sees only
   lifecycle events for their own incident, another Citizen sees none, and
   Worker sees the event.
 - Isolated real Auth users were created through the Admin API, signed in, and

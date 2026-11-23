@@ -3,13 +3,13 @@
 Next.js App Router frontend for CivicFlow. See the repository root `README.md`
 for full setup and environment documentation.
 
-Phase 1 through Phase 4 add:
+Phase 1 through Phase 5 add:
 
 - Supabase browser client using public configuration only.
 - `/login`, `/signup`, and `/auth/callback` pages.
 - Session restoration, token refresh, sign-out, and auth-aware navigation.
-- Protected `/dashboard`, `/incidents/**`, and `/map` routes with optimistic
-  proxy redirects and a client-side auth guard.
+- Protected `/dashboard`, `/incidents/**`, `/map`, and `/risk` routes with
+  optimistic proxy redirects and a client-side auth guard.
 - An incident queue, report form, detail view, inline editing, staff lifecycle
   actions, and an immutable history timeline.
 - A MapLibre GL JS incident map with viewport bbox queries, native clustering,
@@ -19,6 +19,9 @@ Phase 1 through Phase 4 add:
 - An explainable incident-intelligence panel with duplicate/related suggestions,
   staff-reviewed relationships, nearby infrastructure, potential impact paths,
   thresholds, and limitations.
+- An H3 urban risk map with GeoJSON cells, resolution/window controls, legend,
+  viewport filtering, top-cell drilldown, factor bars, trend/confidence, nearby
+  asset exposure, and visible model limitations.
 - A profile/service error state when the FastAPI backend is unavailable.
 
 Roles are assigned by the backend. The frontend never accepts a privileged role

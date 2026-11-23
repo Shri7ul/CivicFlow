@@ -3,9 +3,10 @@
 FastAPI backend for CivicFlow. See the repository root `README.md` for full
 setup, environment, testing, and architecture documentation.
 
-Phase 1 through Phase 4 add:
+Phase 1 through Phase 5 add:
 
-- SQLAlchemy models for 15 tables and Alembic migrations in `alembic/`.
+- SQLAlchemy models for 17 application tables and Alembic migrations in
+  `alembic/`.
 - PostGIS-aware spatial columns and GIST indexes.
 - Supabase JWT verification in `app/auth/`.
 - Centralized role dependencies and audited profile role management.
@@ -17,6 +18,8 @@ Phase 1 through Phase 4 add:
 - Explainable incident correlation, duplicate suggestions, reviewable
   relationships, PostGIS infrastructure proximity, and dependency-aware impact
   foundations.
+- A versioned H3 urban risk engine with explainable factors, trends,
+  infrastructure exposure, Citizen privacy, GeoJSON cells, and staff snapshots.
 - Deterministic development seed data.
 
 ## Commands
@@ -44,10 +47,12 @@ incident API and lifecycle contract, [docs/spatial.md](docs/spatial.md) for
 viewport queries, and [docs/evidence.md](docs/evidence.md) for storage/evidence
 security and the hosted-policy boundary, and
 [docs/intelligence.md](docs/intelligence.md) for Phase 4 scoring, review,
-privacy, and data limitations.
+privacy, and data limitations, and [docs/risk-engine.md](docs/risk-engine.md)
+for the Phase 5 H3 risk model, API, privacy, and interpretation limits.
 
 The automated test suite uses isolated SQLite plus offline PostgreSQL SQL
 rendering. Live Supabase migration, PostGIS, RLS/ACL, real ES256 sign-in,
 provisioning, role changes, incident API flows, private Storage upload/signed download, and headless-browser
-map/evidence flows, plus Phase 4 intelligence/relationship and browser flows, were also executed with disposable users and then cleaned up;
+map/evidence flows, plus Phase 4 intelligence/relationship and Phase 5
+risk API/browser flows, were also executed with disposable users and then cleaned up;
 see the docs for the exact boundary.

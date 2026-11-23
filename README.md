@@ -7,15 +7,16 @@ understanding urban risk, and coordinating municipal response. The repository
 currently contains **Phase 0** (application foundation), **Phase 1** (database
 architecture + authentication/authorization), **Phase 1.6** (security hardening),
 **Phase 2** (incident reporting and lifecycle management), **Phase 3**
-(spatial map, clustering, and private evidence), and **Phase 4** (explainable
-incident intelligence).
+(spatial map, clustering, and private evidence), **Phase 4** (explainable
+incident intelligence), and **Phase 5** (H3 urban risk engine).
 
-Phase 4 adds deterministic correlation and duplicate suggestions, reviewable
-relationship records, PostGIS infrastructure proximity, and dependency-aware
-impact foundations. Every suggestion carries reasons, confidence, and explicit
-limitations; nothing is auto-merged. Risk scoring, scenario simulation,
-notifications, and authoritative municipal dataset ingestion remain future work. See [docs/PROGRESS.md](docs/PROGRESS.md) for current status,
-verification evidence, and known boundaries.
+Phase 5 adds spatially aggregated, temporally comparable risk cells with
+configurable factors, confidence, trends, infrastructure exposure, a risk map,
+and staff-persisted snapshots. Observed incident activity is reported separately
+from inferred exposure, and every score carries explanations and limitations.
+Scenario simulation, notifications, and authoritative municipal dataset
+ingestion remain future work. See [docs/PROGRESS.md](docs/PROGRESS.md) for
+current status, verification evidence, and known boundaries.
 
 ## What is implemented
 
@@ -80,6 +81,36 @@ verification evidence, and known boundaries.
 - Real frontend routes: `/incidents`, `/incidents/new`, and
   `/incidents/[id]`, with report creation, filtering, detail, editing, staff
   actions, and lifecycle history.
+
+### Phase 5 — urban risk engine
+
+- Versioned `risk-v1` model with deterministic H3 aggregation and validated
+  configuration (`RISK_*` settings, stable `config_hash`).
+- Nine explainable factors: severity, adjusted density, within-cell spatial
+  concentration, recency, active share, category consequence, previous-period
+  trend, infrastructure exposure, and dependency context. The API returns raw
+  values, normalized values, weights, contributions, availability, and reasons.
+- Configurable resolutions (7–10, default 8), windows (default 7 days, maximum
+  90 days), risk bands (`MINIMAL`→`CRITICAL`), recency half-life, density
+  saturation, and minimum-history rules.
+- Bounded PostGIS queries and bbox filtering; the API rejects oversized
+  incident/cell results instead of silently truncating.
+- `GET /api/v1/risk/cells` (JSON or GeoJSON), `/risk/summary`, `/risk/trends`,
+  `/risk/cells/{h3_cell_id}`, `/risk/config`, and
+  `/risk/infrastructure-exposure`.
+- `POST /api/v1/risk/runs` and `GET /api/v1/risk/runs` let WORKER/ADMIN users
+  persist versioned runs and per-cell snapshots for later comparison.
+- Citizen responses apply a minimum-cell-count privacy rule and only return
+  incident briefs the caller is authorized to see. Trend comparisons are also
+  withheld when either window is below the privacy minimum. Aggregate risk is
+  not a disclosure of hidden incident details.
+- Protected `/risk` MapLibre H3 map with resolution/window controls, legend,
+  viewport filtering, top-cell drilldown, factor bars, trend/confidence,
+  infrastructure context, and visible limitations.
+- Confirmed duplicate clusters are deduplicated globally across the current and
+  previous windows, then across H3 boundaries, before cells are scored.
+- Risk is decision support, not a prediction or confirmed impact. Dependency
+  exposure is geospatial association, not a confirmed outage or cascade.
 
 ### Phase 4 — incident intelligence
 
@@ -149,13 +180,15 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (15 tables)
+    models/                   SQLAlchemy model registry (17 application tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
     services/evidence.py      Evidence validation, upload, signed URL flow
     services/storage.py       Server-only Supabase Storage adapter
     services/intelligence.py  Correlation, duplicate, infrastructure, impact
+    risk/                     Versioned H3 risk config, scoring, exposure, engine
+    api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config
     seed.py                   Deterministic development seed
   alembic/
     versions/0001_initial_schema.py
@@ -166,6 +199,8 @@ backend/
     versions/0006_incident_intelligence.py
     versions/0007_relationship_checks.py
     versions/0008_confidence_check_name.py
+    versions/0009_urban_risk_engine.py
+    versions/0010_risk_factor_default.py
   tests/                      Config, DB, auth, API, migration, seed tests
 ```
 
@@ -180,13 +215,14 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0008_confidence_check_name`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0010_risk_factor_default`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
 `backend/docs/incidents.md` for the lifecycle contract,
 `backend/docs/spatial.md` for the viewport API, and
-`backend/docs/evidence.md` for the evidence/storage boundary.
+`backend/docs/evidence.md` for the evidence/storage boundary, and
+`backend/docs/risk-engine.md` for the Phase 5 model and API contract.
 
 ## Quick start (Windows PowerShell)
 
@@ -370,6 +406,17 @@ rejected. The last active administrator cannot be demoted.
 | `INTELLIGENCE_RELATED_CONFIDENCE_THRESHOLD` | `0.42` | Minimum related confidence |
 | `INTELLIGENCE_INFRASTRUCTURE_RADIUS_M` | `1000` | Asset proximity radius |
 | `INTELLIGENCE_IMPACT_DEPTH` / `LIMIT` | `2` / `20` | Dependency-path bounds |
+| `RISK_MODEL_VERSION` | `risk-v1` | Version tag stored with cells/snapshots |
+| `RISK_MIN/DEFAULT/MAX_RESOLUTION` | `7` / `8` / `10` | H3 resolution bounds |
+| `RISK_DEFAULT/MAX_WINDOW_HOURS` | `168` / `2160` | Default and maximum lookback |
+| `RISK_RECENCY_HALF_LIFE_HOURS` | `72` | Exponential recency decay |
+| `RISK_DENSITY_SATURATION` | `20` | Log density saturation |
+| `RISK_INFRASTRUCTURE_RADIUS_M` | `750` | Asset proximity radius |
+| `RISK_MAX_INCIDENTS` / `CELLS` | `20000` / `500` | Bounded query caps |
+| `RISK_PRIVACY_MIN_INCIDENTS` | `3` | Citizen small-cell minimum |
+| `RISK_TREND_MIN_INCIDENTS` | `3` | Minimum current+previous history |
+| `RISK_WEIGHT_*` | see config | Nine factors summing to 1.0 |
+| `RISK_THRESHOLD_LOW/MODERATE/HIGH/CRITICAL` | `20/40/65/85` | Category bands |
 
 Production validation rejects debug mode, empty CORS origins, a missing
 database URL, and a missing Supabase URL. Secret settings use `SecretStr` and
@@ -403,6 +450,12 @@ instead of crashing. The production build succeeds without live credentials.
   `incident_relationships`, its constraints/indexes, RLS, and SELECT-only grants.
   `0007`/`0008` normalize CHECK constraint names created during early Phase 4
   development.
+- `alembic/versions/0009_urban_risk_engine.py` adds `risk_model_runs` and
+  `risk_cell_snapshots`, staff-only RLS, SELECT-only authenticated grants, and
+  run/cell indexes. The existing `risk_cells`/`risk_assessments` tables remain
+  available as the generic Phase 1 risk schema; Phase 5 snapshots are separate.
+  `0010_risk_factor_default.py` aligns the snapshot factor-contribution default
+  with the JSON-array model contract.
 - `alembic/versions/0005_map_evidence_storage.py` adds evidence MIME/size
   constraints and a composite index, revokes direct authenticated INSERT on
   `incident_evidence`, and creates the private `incident-evidence` Storage
@@ -428,9 +481,9 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0008_confidence_check_name`; all 15 application tables, 19
-  application RLS policies, 9 triggers, 17 foreign keys, 6 unique constraints,
-  and 4 GIST indexes exist. The private `incident-evidence` bucket exists with
+- Alembic is at `0010_risk_factor_default`; 17 application tables, 21 application
+  RLS policies, 9 triggers, 19 foreign keys, 7 unique constraints, and 5 GIST
+  indexes exist (plus `alembic_version` and PostGIS `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
 - RLS was exercised with synthetic JWT claims inside a rolled-back transaction
   for anonymous, Citizen, Worker, and Admin behavior. No validation rows were
@@ -440,10 +493,18 @@ The configured Supabase project was validated on **2026-11-23**:
 - Live least-privilege hardening removed inherited `TRUNCATE`, `REFERENCES`,
   `TRIGGER`, and `MAINTAIN` grants from `anon`/`authenticated`; `service_role`
   was intentionally left unchanged. Anonymous now has no application-table
-  grants. After `0008`, authenticated has SELECT on all 15 application tables,
+  grants. After `0010`, authenticated has SELECT on all 17 application tables,
   INSERT on incidents and scenarios, column UPDATE on `profiles.full_name/phone`
-  only, and no direct INSERT on `incident_evidence` or
-  `incident_relationships`.
+  only, and no direct INSERT on `incident_evidence`,
+  `incident_relationships`, `risk_model_runs`, or `risk_cell_snapshots`; risk
+  snapshots are SELECT-only for authenticated and never writable through the
+  API role.
+- Phase 5 live validation created isolated Auth users, incidents, infrastructure
+  assets, and a dependency edge. It verified H3/GeoJSON cells, factor
+  explanations, bbox filtering, Citizen minimum-count suppression, authorized
+  incident briefs, staff snapshot persistence, run history, and cleanup to zero.
+  Headless Chrome verified `/risk`, the H3 overlay, top-cell drilldown, factor
+  explanations, infrastructure/limitations copy, and the dashboard link.
 - Real Supabase Auth users were created only for isolated validation and deleted
   afterward. Sign-in issued real ES256 access tokens; the backend accepted them
   through the live JWKS, profile provisioning worked, `/auth/me` returned the
@@ -504,7 +565,9 @@ JWKS rotation and HS256 rejection), provisioning, RBAC matrix, audited role chan
 last-admin protection, incident visibility, validation, editing rules,
 lifecycle transitions, history, department assignment, duplicate/related
 scoring, relationship review and privacy, infrastructure proximity, and
-dependency-path labeling.
+dependency-path labeling, H3 boundaries, spatial concentration, trend
+classification, risk privacy, GeoJSON rendering, and risk run/snapshot
+persistence.
 
 ### Frontend
 
@@ -520,7 +583,7 @@ Vitest covers the API client, auth/profile API calls, incident query
 serialization and lifecycle helpers, open-redirect protection, optimistic
 cookie handling, auth state derivation, role labels, public Supabase
 configuration, intelligence API calls, confidence/distance formatting, and
-suggestion-vs-inference labels.
+suggestion-vs-inference labels, risk formatting, and risk API serialization.
 
 ### Verification boundary
 
@@ -568,7 +631,7 @@ suggestion-vs-inference labels.
 | Profile provisioning / audited roles | Complete and tested |
 | Frontend auth foundation | Complete and tested |
 | Supabase RLS | Applied live; synthetic-claim policy matrix and real-user flows verified |
-| ACL least privilege | Applied live through `0008_confidence_check_name`; verified directly |
+| ACL least privilege | Applied live through `0010_risk_factor_default`; verified directly |
 | Legacy HS256 JWT path | Removed; ES256/JWKS only |
 | Incident report/list/detail/edit | Complete and tested |
 | Incident lifecycle and history | Complete and tested |
@@ -581,8 +644,10 @@ suggestion-vs-inference labels.
 | Incident intelligence and duplicate suggestions | Complete; live API/browser verified |
 | Reviewable incident relationships | Complete; live API verified |
 | Infrastructure proximity / impact foundation | Complete; live API verified |
-| Risk / scenarios / notifications / authoritative asset ingestion | Not implemented (future phases) |
+| H3 urban risk cells, trends, and exposure | Complete; live API/browser verified |
+| Staff risk runs and per-cell snapshots | Complete; live API verified |
+| Scenario simulation / notifications / authoritative asset ingestion | Not implemented (future phases) |
 
-Phase 4 incident intelligence is the current endpoint. Phase 3 was committed and
-pushed as `69cf003` (`feat(civicflow): complete phase 3 spatial intelligence`);
-the Phase 4 changes are intentionally uncommitted in the working tree.
+Phase 4 was committed and pushed as `bfc073e`
+(`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
+committed as the checkpoint before Phase 6.

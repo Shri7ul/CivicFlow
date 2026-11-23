@@ -84,6 +84,21 @@ class RiskLevel(str, Enum):
     EXTREME = "EXTREME"
 
 
+class RiskCategory(str, Enum):
+    MINIMAL = "MINIMAL"
+    LOW = "LOW"
+    MODERATE = "MODERATE"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class TrendDirection(str, Enum):
+    INCREASING = "INCREASING"
+    DECREASING = "DECREASING"
+    STABLE = "STABLE"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+
+
 class RiskEntityType(str, Enum):
     INCIDENT = "INCIDENT"
     INFRASTRUCTURE_ASSET = "INFRASTRUCTURE_ASSET"

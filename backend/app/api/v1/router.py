@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     incidents,
     infrastructure,
     intelligence,
+    risk,
 )
 
 api_router = APIRouter()
@@ -23,4 +24,5 @@ api_router.include_router(
 api_router.include_router(
     infrastructure.router, prefix="/infrastructure", tags=["infrastructure"]
 )
+api_router.include_router(risk.router, prefix="/risk", tags=["risk"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

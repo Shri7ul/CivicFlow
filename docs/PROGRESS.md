@@ -17,11 +17,13 @@ Last updated: 2026-11-24
 | Phase 2 / Goal 05 — incident API/lifecycle | ACCEPTED | Migration `0004`, API, live API validation |
 | Phase 2 / Goal 06 — incident frontend | ACCEPTED | `/incidents`, `/incidents/new`, `/incidents/[id]`, live browser flow |
 | Phase 3 — spatial map, clustering, evidence | ACCEPTED (storage-policy limitation) | Migration `0005`, map/evidence live API + browser runs, 112 backend / 44 frontend tests |
-| Phase 4 — incident intelligence | ACCEPTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
+| Phase 4 — incident intelligence | ACCEPTED + COMMITTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
+| Phase 5 — urban risk engine | COMPLETE — awaiting review | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
 
 Phase 3 was committed and pushed as `69cf003`
-(`feat(civicflow): complete phase 3 spatial intelligence`). The Phase 4 working
-tree is intentionally uncommitted; no Phase 4 push was performed.
+(`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
+and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
+intelligence`). Phase 5 is committed as the checkpoint before Phase 6.
 
 ## Phase 4 implementation checklist
 
@@ -84,6 +86,72 @@ tree is intentionally uncommitted; no Phase 4 push was performed.
 - [x] Clean up all disposable rows, users, assets, edges, and relationships.
 - [x] Update README, backend/frontend READMEs, auth/RLS docs, and intelligence docs.
 
+## Phase 5 implementation checklist
+
+### Model and spatial aggregation
+
+- [x] Audit the existing risk models/schema and preserve the Phase 1
+  `risk_cells`/`risk_assessments` tables.
+- [x] Add `risk_model_runs` and `risk_cell_snapshots` with staff-only RLS,
+  version/config hash, window, resolution, scores, factors, and trends.
+- [x] Add migration `0009_urban_risk_engine` with indexes, checks, grants, and
+  a complete downgrade; add `0010_risk_factor_default` for the JSON-array
+  snapshot default.
+- [x] Add validated `RISK_*` configuration and a stable configuration hash.
+- [x] Implement H3 aggregation with configurable resolution and GeoJSON/WKT
+  boundaries.
+- [x] Bound incident and cell queries; fail clearly instead of truncating.
+
+### Explainable scoring and temporal analysis
+
+- [x] Implement nine factors: severity, adjusted density, within-cell spatial
+  concentration, recency, active share, category, trend, infrastructure
+  exposure, and dependency context.
+- [x] Apply only WORKER/ADMIN-confirmed duplicates; expose the adjustment.
+- [x] Deduplicate globally across both windows and across H3 boundaries so a
+  confirmed duplicate cannot be counted twice or inflate a trend.
+- [x] Return raw/normalized values, weights, contributions, availability, and
+  explanations.
+- [x] Report `incident_activity_score` separately from composite risk.
+- [x] Compare the immediately previous equal-length window and classify trends.
+- [x] Require full previous-window coverage and minimum combined history before
+  asserting a trend direction.
+- [x] Compute infrastructure exposure from proximity/type/criticality and
+  dependency links, with authoritative/development provenance.
+
+### APIs and security
+
+- [x] Add `/risk/config`, `/risk/cells` (JSON/GeoJSON), `/risk/summary`,
+  `/risk/cells/{id}`, `/risk/trends`, and `/risk/infrastructure-exposure`.
+- [x] Add WORKER/ADMIN `POST /risk/runs` and `GET /risk/runs` persistence.
+- [x] Enforce Citizen minimum-cell-count privacy, withhold trend comparisons
+  when either window is below the minimum, and authorize incident briefs.
+- [x] Return opaque 404s for hidden cells and 403 for non-staff snapshots.
+- [x] Validate resolution/window/bbox/limit and document error codes.
+
+### Frontend
+
+- [x] Add typed risk API/types/formatting helpers.
+- [x] Add protected `/risk` route and navigation/dashboard links.
+- [x] Preserve the Phase 3 incident map and add H3 GeoJSON fill/line/labels.
+- [x] Add window/resolution controls, legend, summary cards, and viewport bbox.
+- [x] Add top-cell selection, map drilldown, factor bars, trend/confidence,
+  infrastructure exposure, authorized briefs, and limitations.
+- [x] Add loading/error/empty/suppressed states and a responsive layout.
+- [x] Add frontend API/helper/routing tests.
+
+### Verification and documentation
+
+- [x] Run backend unit/API/constraint/migration/config tests.
+- [x] Run frontend typecheck, lint, Vitest, and production build.
+- [x] Apply `0009`/`0010` live; verify `alembic current/check`.
+- [x] Live API validation with isolated users/incidents/assets/edge + cleanup.
+- [x] Headless-Chrome risk map/dashboard validation + screenshot.
+- [x] Update README, progress, backend/frontend READMEs, env docs, and
+  `backend/docs/risk-engine.md`.
+- [x] Record honest limitations: inferred exposure, development assets, sparse
+  trends, and privacy thresholds.
+
 ## Phase 3 implementation checklist
 
 ### Repository audit
@@ -134,6 +202,61 @@ tree is intentionally uncommitted; no Phase 4 push was performed.
 - [x] Run typecheck, lint, Vitest, build, pytest, Alembic checks.
 - [x] Run live storage/map/browser validation and clean up test data.
 - [x] Update README, API docs, spatial/evidence docs, env docs, and acceptance report.
+
+## Phase 5 scope implemented
+
+### Risk engine
+
+- `risk-v1` is deterministic and configuration-driven. Weights, H3 resolutions,
+  windows, recency half-life, density saturation, privacy/trend minima, and
+  category thresholds are validated at startup and exposed at `/risk/config`.
+- Default factor weights sum to 1.0: severity 0.24, density 0.13, spatial 0.07,
+  recency 0.14, active 0.08, category 0.08, trend 0.06, infrastructure 0.14,
+  dependency 0.06.
+- Current and previous windows are loaded in one bounded query. Trend is
+  `INCREASING`/`DECREASING`/`STABLE`/`INSUFFICIENT_DATA`; sparse cells do not
+  get a confident direction.
+- H3 cells at resolutions 7–10 (default 8) return GeoJSON polygons, WKT,
+  centers, category/confidence, distributions, and factor explanations.
+- Staff runs persist a model version, config hash, window/resolution, and
+  per-cell snapshots.
+
+### Adversarial review fixes
+
+- Deduplicate confirmed duplicate clusters globally across the current and
+  previous windows before H3 assignment; this removes cross-window and
+  cross-cell double counting.
+- Renormalize reported factor contributions against the same effective weights
+  used for scoring, so contributions always explain the returned risk score.
+- Require exact factor, severity, and category configuration keys and freeze
+  configuration mappings after validation.
+- Treat POLYGON asset containment as zero distance; keep PostGIS bbox filtering
+  sargable for the incident GIST index.
+- Withhold trends unless the previous window is fully covered by history, and
+  withhold Citizen trend comparisons when either window is below the privacy
+  minimum.
+- Validate H3 drilldown IDs and return the opaque `risk_cell_not_found` response.
+- Add `0010_risk_factor_default` so the snapshot JSON-array default matches the
+  model contract on live and fresh databases.
+
+### Privacy and exposure
+
+- Citizens see only cells meeting the minimum incident count; suppressed counts
+  are reported, and hidden cell detail returns an opaque 404.
+- Cell detail incident briefs follow normal incident authorization. Aggregate
+  cells never expose reporter identities.
+- Infrastructure exposure combines nearby active asset type/criticality and
+  dependency-link counts. It is labeled geospatial association, not confirmed
+  outage or cascade.
+- Dataset provenance reports authoritative, development/unknown, and
+  asset-limit truncation.
+
+### Frontend
+
+- `/risk` renders an H3 risk overlay on MapLibre while preserving `/map`.
+- Window/resolution controls, viewport bbox filtering, legend, summary cards,
+  top-cell selection, factor bars, trends, infrastructure context, authorized
+  briefs, and limitations are implemented with responsive/empty/error states.
 
 ## Phase 4 scope implemented
 
@@ -244,27 +367,30 @@ cd ..
 
 Latest recorded results:
 
-- Backend: **122 passed**.
-- Alembic: live revision `0008_confidence_check_name`; `alembic check` reports
+- Backend: **136 passed** (Phase 5 final adversarial-review run; update if the
+  suite changes).
+- Alembic: live revision `0010_risk_factor_default`; `alembic check` reports
   **No new upgrade operations detected** (custom PostGIS type warnings only).
-- Frontend: typecheck, ESLint, **51 tests** (15 files), and production build
+- Frontend: typecheck, ESLint, **57 tests** (17 files), and production build
   pass.
-- `scripts/verify.ps1` passes (run after the Phase 4 verification suite).
+- `scripts/verify.ps1` passes (run after the Phase 5 verification suite).
 
 ## Live validation evidence
 
 - Live PostgreSQL 17.12 + PostGIS 3.3.7, all migrations applied through
-  `0008_confidence_check_name`.
-- 15 application tables, 19 application RLS policies, 9 triggers, 17 foreign
-  keys, 6 unique constraints, 4 GIST indexes. RLS enabled on all 15 application
-  tables. Evidence MIME/size constraints, the evidence composite index, and
-  normalized Phase 4 relationship CHECKs are present.
+  `0010_risk_factor_default`.
+- 17 application tables, 21 application RLS policies, 9 triggers, 19 foreign
+  keys, 7 unique constraints, 5 GIST indexes. RLS is enabled on all 17
+  application tables. Evidence MIME/size constraints, the evidence composite
+  index, normalized Phase 4 relationship CHECKs, and Phase 5 risk-run indexes
+  are present.
 - Private `incident-evidence` Storage bucket exists with `public=false`,
   10 MB limit, and JPEG/PNG/WebP allowlist.
-- ACLs after `0005`: `anon` has no application-table privileges;
-  `authenticated` has SELECT on all 15 application tables, INSERT on incidents
+- ACLs after `0010`: `anon` has no application-table privileges;
+  `authenticated` has SELECT on all 17 application tables, INSERT on incidents
   and scenarios, column UPDATE only on `profiles.full_name/phone`, and no direct
-  INSERT on `incident_evidence` or `incident_relationships`.
+  INSERT on `incident_evidence`, `incident_relationships`,
+  `risk_model_runs`, or `risk_cell_snapshots`.
 - Real isolated Auth users completed sign-in with ES256 tokens, backend JWKS
   verification, profile provisioning, `/auth/me`, role changes, and cleanup.
 - Real API validation covered report creation, Citizen scoping, Worker/Admin
@@ -276,6 +402,16 @@ Latest recorded results:
   privacy, staff-only review, relationship persistence/uniqueness, citizen
   relationship hiding, opaque 404 intelligence access, PostGIS asset proximity,
   inferred-impact labeling, authenticated asset listing, and cleanup to zero.
+- Phase 5 live API validation (disposable users/incidents/assets/dependency
+  edge): H3 cells and GeoJSON, all factor keys, PostGIS bbox filtering,
+  infrastructure/dependency exposure, summary/trends, Citizen privacy and
+  authorized briefs, staff run persistence and snapshot counts, non-staff 403,
+  unauthenticated 401, and cleanup to zero.
+- Phase 5 live headless-Chrome validation:
+  protected `/risk` loaded real cells, summary cards and legend rendered, top
+  cell selection loaded factor contributions/infrastructure/limitations,
+  decision-support copy was present, and the dashboard linked to the risk map.
+  A screenshot was captured.
 - Phase 4 live headless-Chrome validation:
   signed-in incident detail rendered the intelligence panel, duplicate
   candidate, explanation details, decision-support label, reviewed/empty
@@ -318,20 +454,26 @@ Latest recorded results:
   cascade prediction.
 - The repository has no authoritative municipal asset feed; infrastructure rows
   are development seed data unless a deployment loads its own dataset.
-- No risk scoring/H3 engine, scenario simulation, notification delivery, admin
-  dashboard, or department management.
+- Risk is decision support, not prediction or confirmed impact. H3 cells are
+  analysis units, and sparse or incompletely covered history can suppress trends.
+- Minimum-count suppression applies to total cell counts; severity/category
+  sub-distributions are not independently suppressed inside an eligible cell.
+- Infrastructure exposure/dependencies are geospatial associations, not proven
+  outages or cascades. Repository assets are development data unless replaced.
+- No scenario simulation, notification delivery, admin dashboard, or department
+  management.
 - Departments and authoritative infrastructure data must be loaded out of band.
 - OSM public raster tiles are used for this phase; production tile usage must be
   reviewed separately.
-- No commit or push was made. Environment files remain untracked/ignored.
+- Phase 5 is committed as the Phase 6 checkpoint. Environment files remain
+  untracked/ignored.
 
 ## Suggested next goals
 
 1. Apply the documented `storage.objects` visibility policy through a role that
    owns the hosted table, then verify direct signed-URL-free access.
 2. Authoritative municipal asset/dataset ingestion with provenance and freshness.
-3. Risk scoring and H3 risk cells built on incident/infrastructure history.
-4. Scenario simulation, dependency optimization, and notification delivery.
-5. Admin operations UI, department management, and audit export.
-6. Re-run public signup -> email confirmation -> sign-in after the Supabase
+3. Scenario simulation, dependency optimization, and notification delivery.
+4. Admin operations UI, department management, and audit export.
+5. Re-run public signup -> email confirmation -> sign-in after the Supabase
    email rate limit resets.
