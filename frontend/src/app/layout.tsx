@@ -1,0 +1,36 @@
+import type { Metadata, Viewport } from "next";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+import { Providers } from "@/app/providers";
+import { siteConfig } from "@/config/app";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: {
+    default: siteConfig.title,
+    template: `%s · ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: [
+    "CivicFlow",
+    "civic technology",
+    "urban resilience",
+    "incident response",
+  ],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#05080a",
+  colorScheme: "dark",
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html lang="en" className="h-full">
+      <body className="min-h-full antialiased">
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
