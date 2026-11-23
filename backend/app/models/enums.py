@@ -113,3 +113,62 @@ class ScenarioStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     ARCHIVED = "ARCHIVED"
+
+
+class ScenarioHazard(str, Enum):
+    FLOOD = "FLOOD"
+    DRAINAGE = "DRAINAGE"
+    ROAD = "ROAD"
+    FIRE = "FIRE"
+    HEALTH = "HEALTH"
+    UTILITY = "UTILITY"
+    MULTI_HAZARD = "MULTI_HAZARD"
+    OTHER = "OTHER"
+
+
+class ResponseActionType(str, Enum):
+    INSPECT = "INSPECT"
+    DISPATCH = "DISPATCH"
+    REPAIR = "REPAIR"
+    CLEAN = "CLEAN"
+    EVACUATE = "EVACUATE"
+    SHELTER = "SHELTER"
+    MEDICAL = "MEDICAL"
+    UTILITY = "UTILITY"
+    COMMUNICATION = "COMMUNICATION"
+    OTHER = "OTHER"
+
+
+class ResourceType(str, Enum):
+    PERSONNEL = "PERSONNEL"
+    VEHICLE = "VEHICLE"
+    EQUIPMENT = "EQUIPMENT"
+    SUPPLY = "SUPPLY"
+    FACILITY = "FACILITY"
+    OTHER = "OTHER"
+
+
+class ResourceAvailability(str, Enum):
+    UNKNOWN = "UNKNOWN"
+    AVAILABLE = "AVAILABLE"
+    LIMITED = "LIMITED"
+    UNAVAILABLE = "UNAVAILABLE"
+    PLANNING_ASSUMPTION = "PLANNING_ASSUMPTION"
+
+
+class ResourceAllocationMode(str, Enum):
+    SHARED_CAPACITY = "SHARED_CAPACITY"
+    CONSUMABLE = "CONSUMABLE"
+
+
+class DecisionStrategy(str, Enum):
+    PRIORITY = "PRIORITY"
+    RISK_REDUCTION = "RISK_REDUCTION"
+    COST_EFFICIENT = "COST_EFFICIENT"
+    BALANCED = "BALANCED"
+
+
+class SimulationStatus(str, Enum):
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"

@@ -40,6 +40,11 @@ EXPECTED_TABLES = {
     "risk_assessments",
     "scenarios",
     "scenario_results",
+    "decision_scenarios",
+    "decision_actions",
+    "action_resource_requirements",
+    "response_resources",
+    "decision_simulations",
     "role_change_audits",
 }
 

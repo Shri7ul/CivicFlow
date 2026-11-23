@@ -14,7 +14,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestLoggingMiddleware
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 logger = get_logger("app")
 
 
@@ -53,10 +53,10 @@ def create_app() -> FastAPI:
         version=APP_VERSION,
         description=(
             "Urban Impact & Response Intelligence API. "
-            "Phase 5 adds a versioned H3 urban risk engine with explainable "
-            "factor contributions, temporal trends, infrastructure exposure, "
-            "and staff snapshots on top of incident operations, spatial "
-            "exploration, private evidence, and reviewable intelligence."
+            "Phase 6 adds staff-only decision scenarios, explicit response "
+            "resources, bounded planning simulation, and strategy comparison "
+            "on top of incident operations, spatial exploration, private "
+            "evidence, reviewable intelligence, and the H3 urban risk engine."
         ),
         lifespan=lifespan,
     )

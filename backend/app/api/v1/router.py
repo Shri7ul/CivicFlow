@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     admin,
     auth,
+    decisions,
     departments,
     health,
     incidents,
@@ -25,4 +26,7 @@ api_router.include_router(
     infrastructure.router, prefix="/infrastructure", tags=["infrastructure"]
 )
 api_router.include_router(risk.router, prefix="/risk", tags=["risk"])
+api_router.include_router(
+    decisions.router, prefix="/decisions", tags=["decisions"]
+)
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

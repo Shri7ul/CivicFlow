@@ -17,12 +17,14 @@ const roleCapabilities: Record<string, readonly string[]> = {
     "Advance incidents through the response lifecycle",
     "Review duplicate and related-incident suggestions",
     "Inspect H3 risk cells, trends, and infrastructure exposure",
+    "Plan response scenarios with explicit resource assumptions",
   ],
   ADMIN: [
     "Oversee the citywide incident queue",
     "Use the same audited response workflow as workers",
     "Review explainable intelligence suggestions and relationships",
     "Inspect urban risk cells and model limitations",
+    "Plan and compare response scenarios without dispatching resources",
     "Manage application roles and privileged access",
   ],
 };
@@ -41,7 +43,7 @@ export function DashboardView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-            Phase 5 urban risk intelligence
+            Phase 6 decision intelligence
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Welcome, {profile.full_name}
@@ -138,6 +140,12 @@ export function DashboardView() {
               className="inline-flex rounded-lg border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-sm font-medium text-amber-100 transition hover:bg-amber-300/15"
             >
               Open risk map
+            </Link>
+            <Link
+              href="/decisions"
+              className="inline-flex rounded-lg border border-sky-300/25 bg-sky-300/10 px-4 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-300/15"
+            >
+              Plan scenarios
             </Link>
           </div>
         </aside>

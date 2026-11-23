@@ -56,6 +56,16 @@ const foundationItems = [
       "MapLibre H3 polygons, resolution/window controls, previous-period trends, confidence, and staff-only persistent snapshots.",
   },
   {
+    title: "Decision scenarios",
+    description:
+      "Staff-only response scenarios with explicit actions, dependencies, budgets, and resource constraints.",
+  },
+  {
+    title: "Planning simulation and strategy comparison",
+    description:
+      "Bounded scheduling heuristics show reduction, coverage, cost, and blocked actions without dispatching or reserving anything.",
+  },
+  {
     title: "Supabase authentication",
     description:
       "Signed ES256 JWT verification with JWKS rotation, expiry, issuer, audience, and claim validation.",
@@ -68,35 +78,35 @@ const foundationItems = [
 ] as const;
 
 const upcomingItems = [
-  "Scenario simulation and optimization",
   "Notification delivery",
   "Admin and department management",
   "Authoritative municipal asset/dataset ingestion",
+  "Calibrated outcome evaluation for response strategies",
 ] as const;
 
 const architectureCards = [
   {
     label: "Interface",
     title: "Next.js frontend",
-    status: "Risk + incidents",
+    status: "Risk + decisions",
     description:
-      "Protected incident queue, MapLibre incident and H3 risk maps, private evidence gallery, and reviewable intelligence suggestions.",
+      "Protected incident queue, MapLibre incident, H3 risk, and scenario-target maps, private evidence, intelligence suggestions, and a planning workspace.",
     tags: ["Next.js", "MapLibre", "H3", "TypeScript"],
   },
   {
     label: "Service",
     title: "FastAPI backend",
-    status: "Risk engine + APIs",
+    status: "Risk + decision APIs",
     description:
-      "Verified JWTs, bounded H3 aggregation, versioned scoring, lifecycle transitions, signed Storage URLs, and explainable intelligence APIs.",
+      "Verified JWTs, bounded H3 aggregation, versioned scoring, lifecycle transitions, signed Storage URLs, explainable intelligence, and bounded planning simulation.",
     tags: ["FastAPI", "H3", "PostGIS", "RBAC"],
   },
   {
     label: "Data",
     title: "PostgreSQL + PostGIS",
-    status: "17 tables",
+    status: "22 tables",
     description:
-      "Alembic-managed schema, PostGIS geography and GIST indexes, RLS policies, risk snapshots, and safe seed data.",
+      "Alembic-managed schema, PostGIS geography and GIST indexes, staff-only planning tables, RLS policies, risk snapshots, and safe seed data.",
     tags: ["Supabase", "PostgreSQL", "PostGIS", "Alembic"],
   },
 ] as const;
@@ -171,7 +181,7 @@ export default function HomePage() {
                 href="#status"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Explore Phase 5 status
+                Explore Phase 6 status
                 <ArrowIcon />
               </a>
               <a
@@ -188,7 +198,7 @@ export default function HomePage() {
                   Phase
                 </dt>
                 <dd className="mt-1.5 text-sm font-medium text-slate-200">
-                  5 · Urban risk
+                  6 · Decision planning
                 </dd>
               </div>
               <div>

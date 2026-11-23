@@ -11,17 +11,24 @@ from app.models.department import Department
 from app.models.enums import (
     AssetType,
     ClusterStatus,
+    DecisionStrategy,
     DependencyType,
     IncidentCategory,
     IncidentSeverity,
     IncidentStatus,
     RelationshipStatus,
     RelationshipType,
+    ResourceAllocationMode,
+    ResourceAvailability,
+    ResourceType,
+    ResponseActionType,
     RiskCategory,
     RiskEntityType,
     RiskLevel,
     Role,
+    ScenarioHazard,
     ScenarioStatus,
+    SimulationStatus,
     TrendDirection,
 )
 from app.models.incident import Incident, IncidentEvidence, IncidentStatusEvent
@@ -34,12 +41,24 @@ from app.models.risk import (
     RiskCellSnapshot,
     RiskModelRun,
 )
+from app.models.decision import (
+    ActionResourceRequirement,
+    DecisionAction,
+    DecisionScenario,
+    DecisionSimulation,
+    ResponseResource,
+)
 from app.models.scenario import Scenario, ScenarioResult
 
 __all__ = [
     "AssetType",
     "Base",
+    "ActionResourceRequirement",
     "ClusterStatus",
+    "DecisionAction",
+    "DecisionScenario",
+    "DecisionSimulation",
+    "DecisionStrategy",
     "DependencyEdge",
     "DependencyType",
     "Department",
@@ -62,11 +81,18 @@ __all__ = [
     "RiskModelRun",
     "RelationshipStatus",
     "RelationshipType",
+    "ResourceAllocationMode",
+    "ResourceAvailability",
+    "ResourceType",
+    "ResponseActionType",
+    "ResponseResource",
     "RiskLevel",
     "Role",
     "RoleChangeAudit",
     "Scenario",
+    "ScenarioHazard",
     "ScenarioResult",
     "ScenarioStatus",
+    "SimulationStatus",
     "TrendDirection",
 ]

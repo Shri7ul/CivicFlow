@@ -8,7 +8,12 @@ currently contains **Phase 0** (application foundation), **Phase 1** (database
 architecture + authentication/authorization), **Phase 1.6** (security hardening),
 **Phase 2** (incident reporting and lifecycle management), **Phase 3**
 (spatial map, clustering, and private evidence), **Phase 4** (explainable
-incident intelligence), and **Phase 5** (H3 urban risk engine).
+incident intelligence), **Phase 5** (H3 urban risk engine), and **Phase 6**
+(decision intelligence and scenario planning).
+
+Phase 6 adds staff-only decision scenarios, explicit response-resource
+assumptions, bounded scheduling, and strategy comparison. Simulations never
+dispatch, reserve, assign, or mutate operational records.
 
 Phase 5 adds spatially aggregated, temporally comparable risk cells with
 configurable factors, confidence, trends, infrastructure exposure, a risk map,
@@ -81,6 +86,26 @@ current status, verification evidence, and known boundaries.
 - Real frontend routes: `/incidents`, `/incidents/new`, and
   `/incidents/[id]`, with report creation, filtering, detail, editing, staff
   actions, and lifecycle history.
+
+### Phase 6 — decision intelligence and scenario planning
+
+- Staff-only `decision_scenarios`, `decision_actions`,
+  `action_resource_requirements`, `response_resources`, and
+  `decision_simulations` tables, all protected by RLS.
+- Explicit resource availability with provenance and `as_of`; `UNKNOWN` is the
+  safe default. `PLANNING_ASSUMPTION` is labeled and never represented as
+  verified inventory.
+- Bounded deterministic scheduler for priority, dependencies, horizon, budgets,
+  shared capacity, consumable resources, and target H3 cells. Actions return
+  `SCHEDULED`, `BLOCKED`, `DEFERRED`, or `UNSCHEDULED` with reasons.
+- Four transparent strategies (`PRIORITY`, `RISK_REDUCTION`,
+  `COST_EFFICIENT`, `BALANCED`) and a comparison endpoint with an explicit
+  objective and solver time limit.
+- Staff APIs under `/api/v1/decisions`; protected `/decisions` and
+  `/decisions/[id]` workspace with target-cell map, action planning, resource
+  assumptions, simulation results, limitations, and strategy comparison.
+- Planning-only safety contract: no dispatch, reservation, assignment, or
+  incident mutation. Every result reports explicit false safety flags.
 
 ### Phase 5 — urban risk engine
 
@@ -165,11 +190,15 @@ frontend/
     dashboard/                Protected role-aware workspace
     incidents/                Protected report, list, and detail routes
     map/                      Protected MapLibre incident map
+    risk/                     Protected H3 risk map
+    decisions/                Protected planning dashboard and scenario workspace
     providers.tsx             Auth provider boundary
   src/components/auth/        Provider, guard, form, navigation, shell
   src/components/map/         Map view and report location picker
   src/components/incidents/   Cards, badges, and evidence gallery
-  src/lib/api/                Typed API client and auth/profile calls
+  src/components/risk/        H3 risk map, drilldown, and factors
+  src/components/decisions/   Scenario dashboard, workspace, target map
+  src/lib/api/                Typed API client and auth/profile/risk/decision calls
   src/lib/auth/               Route safety, role labels, cookie helper
   src/lib/supabase/           Browser client and public configuration
   src/proxy.ts                Optimistic dashboard/incident route protection
@@ -180,7 +209,7 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (17 application tables)
+    models/                   SQLAlchemy model registry (22 application tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
@@ -188,7 +217,9 @@ backend/
     services/storage.py       Server-only Supabase Storage adapter
     services/intelligence.py  Correlation, duplicate, infrastructure, impact
     risk/                     Versioned H3 risk config, scoring, exposure, engine
+    decisions/                Decision config, bounded scheduler, service
     api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config
+    api/v1/endpoints/decisions.py  Scenarios, resources, simulate, compare
     seed.py                   Deterministic development seed
   alembic/
     versions/0001_initial_schema.py
@@ -201,6 +232,7 @@ backend/
     versions/0008_confidence_check_name.py
     versions/0009_urban_risk_engine.py
     versions/0010_risk_factor_default.py
+    versions/0011_decision_intelligence.py
   tests/                      Config, DB, auth, API, migration, seed tests
 ```
 
@@ -215,14 +247,16 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0010_risk_factor_default`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0011_decision_intelligence`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
 `backend/docs/incidents.md` for the lifecycle contract,
-`backend/docs/spatial.md` for the viewport API, and
-`backend/docs/evidence.md` for the evidence/storage boundary, and
-`backend/docs/risk-engine.md` for the Phase 5 model and API contract.
+`backend/docs/spatial.md` for the viewport API,
+`backend/docs/evidence.md` for the evidence/storage boundary,
+`backend/docs/risk-engine.md` for the Phase 5 model and API contract, and
+`backend/docs/decisions.md` for the Phase 6 planning, resource, and safety
+contract.
 
 ## Quick start (Windows PowerShell)
 
@@ -336,6 +370,23 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `POST` | `/api/v1/incidents/{id}/relationships` | WORKER/ADMIN confirm or dismiss a relationship |
 | `GET` | `/api/v1/infrastructure/assets` | Active infrastructure reference set |
 | `GET` | `/api/v1/departments` | Active departments for assignment |
+| `GET` | `/api/v1/risk/config` | Versioned risk model and factor metadata |
+| `GET` | `/api/v1/risk/cells` | Risk cells as JSON or GeoJSON, with bbox/resolution/window filters |
+| `GET` | `/api/v1/risk/summary` | Band totals and freshness for the current window |
+| `GET` | `/api/v1/risk/cells/{h3_cell_id}` | Staff-only cell factor drilldown |
+| `GET` | `/api/v1/risk/trends` | Smoothed trend comparison with privacy withholding |
+| `GET` | `/api/v1/risk/infrastructure-exposure` | Potential asset exposure by cell |
+| `POST` `GET` | `/api/v1/risk/runs` | WORKER/ADMIN snapshot run creation and history |
+| `GET` | `/api/v1/decisions/config` | Decision model version, solver limit, objective |
+| `GET` | `/api/v1/decisions/metadata` | Hazard/action/resource labels |
+| `GET` `POST` | `/api/v1/decisions/resources` | Staff resource inventory |
+| `PATCH` | `/api/v1/decisions/resources/{id}` | Resource availability/provenance update |
+| `GET` `POST` | `/api/v1/decisions/scenarios` | Planning scenario list/create |
+| `GET` `PATCH` | `/api/v1/decisions/scenarios/{id}` | Scenario detail/update |
+| `POST` `PATCH` | `/api/v1/decisions/scenarios/{id}/actions[/{action_id}]` | Add/update response actions |
+| `POST` | `/api/v1/decisions/scenarios/{id}/simulate` | Bounded planning simulation, optional persistence |
+| `POST` | `/api/v1/decisions/scenarios/{id}/compare` | Four-strategy comparison |
+| `GET` | `/api/v1/decisions/scenarios/{id}/simulations[/{simulation_id}]` | Persisted simulation history/detail |
 
 A valid Supabase token without a profile receives `403 profile_required`; call
 provisioning next. Inactive profiles receive `403 account_inactive`. Role and
@@ -456,6 +507,9 @@ instead of crashing. The production build succeeds without live credentials.
   available as the generic Phase 1 risk schema; Phase 5 snapshots are separate.
   `0010_risk_factor_default.py` aligns the snapshot factor-contribution default
   with the JSON-array model contract.
+- `alembic/versions/0011_decision_intelligence.py` adds the five staff-only
+  decision-planning tables, RLS policies, constraints, indexes, and a complete
+  downgrade. Generic `scenarios`/`scenario_results` remain unchanged.
 - `alembic/versions/0005_map_evidence_storage.py` adds evidence MIME/size
   constraints and a composite index, revokes direct authenticated INSERT on
   `incident_evidence`, and creates the private `incident-evidence` Storage
@@ -481,9 +535,10 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0010_risk_factor_default`; 17 application tables, 21 application
-  RLS policies, 9 triggers, 19 foreign keys, 7 unique constraints, and 5 GIST
-  indexes exist (plus `alembic_version` and PostGIS `spatial_ref_sys`). The private `incident-evidence` bucket exists with
+- Alembic is at `0011_decision_intelligence`; 24 public tables including the two PostGIS metadata views; 22 application tables, 26
+  application RLS policies, 9 triggers, 29 foreign keys, 8 unique constraints,
+  and 5 GIST indexes exist (plus `alembic_version` and PostGIS
+  `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
 - RLS was exercised with synthetic JWT claims inside a rolled-back transaction
   for anonymous, Citizen, Worker, and Admin behavior. No validation rows were
@@ -493,12 +548,20 @@ The configured Supabase project was validated on **2026-11-23**:
 - Live least-privilege hardening removed inherited `TRUNCATE`, `REFERENCES`,
   `TRIGGER`, and `MAINTAIN` grants from `anon`/`authenticated`; `service_role`
   was intentionally left unchanged. Anonymous now has no application-table
-  grants. After `0010`, authenticated has SELECT on all 17 application tables,
-  INSERT on incidents and scenarios, column UPDATE on `profiles.full_name/phone`
+  grants. After `0011`, authenticated has SELECT on all 22 application tables,
+  INSERT on incidents and generic scenarios, column UPDATE on
+  `profiles.full_name/phone`
   only, and no direct INSERT on `incident_evidence`,
   `incident_relationships`, `risk_model_runs`, or `risk_cell_snapshots`; risk
-  snapshots are SELECT-only for authenticated and never writable through the
-  API role.
+  snapshots and decision-planning tables are SELECT-only for authenticated and
+  never writable through the API role.
+- Phase 6 live validation created isolated Auth users, a decision scenario,
+  explicit planning/unknown resources, actions, simulations, and a comparison.
+  It verified staff-only access, unknown-resource blocking, planning-assumption
+  labelling, persistence, resource non-decrement, safety flags, Citizen 403,
+  unauthenticated 401, and cleanup to zero. Headless Chrome verified `/decisions`,
+  the scenario workspace, target-cell map, simulation result, strategy
+  comparison, and dashboard link.
 - Phase 5 live validation created isolated Auth users, incidents, infrastructure
   assets, and a dependency edge. It verified H3/GeoJSON cells, factor
   explanations, bbox filtering, Citizen minimum-count suppression, authorized
@@ -631,7 +694,7 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Profile provisioning / audited roles | Complete and tested |
 | Frontend auth foundation | Complete and tested |
 | Supabase RLS | Applied live; synthetic-claim policy matrix and real-user flows verified |
-| ACL least privilege | Applied live through `0010_risk_factor_default`; verified directly |
+| ACL least privilege | Applied live through `0011_decision_intelligence`; verified directly |
 | Legacy HS256 JWT path | Removed; ES256/JWKS only |
 | Incident report/list/detail/edit | Complete and tested |
 | Incident lifecycle and history | Complete and tested |
@@ -646,8 +709,11 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Infrastructure proximity / impact foundation | Complete; live API verified |
 | H3 urban risk cells, trends, and exposure | Complete; live API/browser verified |
 | Staff risk runs and per-cell snapshots | Complete; live API verified |
-| Scenario simulation / notifications / authoritative asset ingestion | Not implemented (future phases) |
+| Decision scenarios, response actions, and explicit resources | Complete; live API/browser verified |
+| Bounded planning simulation and strategy comparison | Complete; live API/browser verified |
+| Notifications / authoritative resource ingestion | Not implemented (future phases) |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
-committed as the checkpoint before Phase 6.
+committed as `640f173`; Phase 6 is the current implementation and is uncommitted
+for review.

@@ -119,6 +119,18 @@ class Settings(BaseSettings):
     risk_threshold_moderate: float = Field(default=40.0, ge=0.0, le=100.0)
     risk_threshold_high: float = Field(default=65.0, ge=0.0, le=100.0)
     risk_threshold_critical: float = Field(default=85.0, ge=0.0, le=100.0)
+    decision_model_version: str = "decision-v1"
+    decision_min_horizon_minutes: int = Field(default=60, ge=1, le=10080)
+    decision_max_horizon_minutes: int = Field(default=10080, ge=1, le=10080)
+    decision_max_actions: int = Field(default=200, ge=1, le=1000)
+    decision_max_resources: int = Field(default=200, ge=1, le=1000)
+    decision_solver_time_limit_ms: int = Field(default=1500, ge=50, le=10000)
+    decision_default_risk_window_hours: int = Field(default=168, ge=1, le=2160)
+    decision_default_resolution: int = Field(default=8, ge=7, le=10)
+    decision_weight_risk_reduction: float = Field(default=0.45, ge=0.0, le=1.0)
+    decision_weight_action_coverage: float = Field(default=0.25, ge=0.0, le=1.0)
+    decision_weight_cost_efficiency: float = Field(default=0.15, ge=0.0, le=1.0)
+    decision_weight_time_efficiency: float = Field(default=0.15, ge=0.0, le=1.0)
 
     @field_validator("app_name")
     @classmethod
@@ -275,6 +287,22 @@ class Settings(BaseSettings):
             raise ValueError(
                 "RISK_DEFAULT_WINDOW_HOURS must be <= RISK_MAX_WINDOW_HOURS"
             )
+        if not (
+            self.decision_min_horizon_minutes
+            <= self.decision_max_horizon_minutes
+        ):
+            raise ValueError(
+                "DECISION_MIN_HORIZON_MINUTES must be <= "
+                "DECISION_MAX_HORIZON_MINUTES"
+            )
+        decision_weights = {
+            "risk_reduction": self.decision_weight_risk_reduction,
+            "action_coverage": self.decision_weight_action_coverage,
+            "cost_efficiency": self.decision_weight_cost_efficiency,
+            "time_efficiency": self.decision_weight_time_efficiency,
+        }
+        if abs(sum(decision_weights.values()) - 1.0) > 1e-6:
+            raise ValueError("DECISION_* weights must sum to 1.0")
         weights = {
             "severity": self.risk_weight_severity,
             "density": self.risk_weight_density,

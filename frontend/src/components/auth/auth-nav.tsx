@@ -51,6 +51,12 @@ export function AuthNav({ compact = false }: { compact?: boolean }) {
           Risk
         </Link>
         <Link
+          href="/decisions"
+          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
+        >
+          Decisions
+        </Link>
+        <Link
           href="/dashboard"
           className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/15 sm:px-3 sm:text-sm"
         >

@@ -32,5 +32,6 @@ export const config = {
     "/incidents/:path*",
     "/map/:path*",
     "/risk/:path*",
+    "/decisions/:path*",
   ],
 };

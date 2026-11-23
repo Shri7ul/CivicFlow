@@ -3,9 +3,9 @@
 FastAPI backend for CivicFlow. See the repository root `README.md` for full
 setup, environment, testing, and architecture documentation.
 
-Phase 1 through Phase 5 add:
+Phase 1 through Phase 6 add:
 
-- SQLAlchemy models for 17 application tables and Alembic migrations in
+- SQLAlchemy models for 22 application tables and Alembic migrations in
   `alembic/`.
 - PostGIS-aware spatial columns and GIST indexes.
 - Supabase JWT verification in `app/auth/`.
@@ -20,6 +20,9 @@ Phase 1 through Phase 5 add:
   foundations.
 - A versioned H3 urban risk engine with explainable factors, trends,
   infrastructure exposure, Citizen privacy, GeoJSON cells, and staff snapshots.
+- Staff-only decision scenarios, response actions, explicit resource
+  assumptions, bounded planning simulation, and strategy comparison. Simulations
+  never dispatch, reserve, or mutate operational records.
 - Deterministic development seed data.
 
 ## Commands
@@ -48,7 +51,9 @@ viewport queries, and [docs/evidence.md](docs/evidence.md) for storage/evidence
 security and the hosted-policy boundary, and
 [docs/intelligence.md](docs/intelligence.md) for Phase 4 scoring, review,
 privacy, and data limitations, and [docs/risk-engine.md](docs/risk-engine.md)
-for the Phase 5 H3 risk model, API, privacy, and interpretation limits.
+for the Phase 5 H3 risk model, API, privacy, and interpretation limits, and
+[docs/decisions.md](docs/decisions.md) for Phase 6 planning, resources, safety,
+and solver limits.
 
 The automated test suite uses isolated SQLite plus offline PostgreSQL SQL
 rendering. Live Supabase migration, PostGIS, RLS/ACL, real ES256 sign-in,

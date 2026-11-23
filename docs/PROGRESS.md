@@ -18,12 +18,14 @@ Last updated: 2026-11-24
 | Phase 2 / Goal 06 — incident frontend | ACCEPTED | `/incidents`, `/incidents/new`, `/incidents/[id]`, live browser flow |
 | Phase 3 — spatial map, clustering, evidence | ACCEPTED (storage-policy limitation) | Migration `0005`, map/evidence live API + browser runs, 112 backend / 44 frontend tests |
 | Phase 4 — incident intelligence | ACCEPTED + COMMITTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
-| Phase 5 — urban risk engine | COMPLETE — awaiting review | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
+| Phase 5 — urban risk engine | COMPLETE — committed as `640f173` | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
+| Phase 6 — decision intelligence | COMPLETE — awaiting review | Migration `0011`, scenarios/actions/resources, bounded simulation, strategy comparison, decision workspace, live API + browser runs |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
-intelligence`). Phase 5 is committed as the checkpoint before Phase 6.
+intelligence`). Phase 5 is committed as `640f173`. Phase 6 is implemented and
+intentionally left uncommitted for review.
 
 ## Phase 4 implementation checklist
 
@@ -85,6 +87,52 @@ intelligence`). Phase 5 is committed as the checkpoint before Phase 6.
 - [x] Run live headless-Chrome validation of the rendered intelligence panel.
 - [x] Clean up all disposable rows, users, assets, edges, and relationships.
 - [x] Update README, backend/frontend READMEs, auth/RLS docs, and intelligence docs.
+
+## Phase 6 implementation checklist
+
+### Models and safety
+
+- [x] Audit existing scenario, infrastructure, incident, risk, and RBAC models.
+- [x] Add `decision_scenarios`, `decision_actions`,
+  `action_resource_requirements`, `response_resources`, and
+  `decision_simulations` with staff-only RLS and a complete downgrade.
+- [x] Make UNKNOWN the safe resource default; require source/as-of provenance
+  for known or assumed availability; never seed fabricated inventory.
+- [x] Enforce planning-only behavior: no dispatch, reservation, assignment,
+  resource decrement, or incident mutation.
+
+### Planning and simulation
+
+- [x] Add response types, priorities, dependencies, durations, earliest starts,
+  costs, expected reductions, and target H3/asset context.
+- [x] Implement bounded deterministic scheduling for shared/consumable resources,
+  dependency cycles, budgets, horizon, and target risk context.
+- [x] Return explicit scheduled/blocked/deferred/unscheduled reasons.
+- [x] Add four transparent strategies and objective component scoring.
+- [x] Enforce a configurable solver time limit and report solver metadata.
+- [x] Persist staff simulations with model/config hash, inputs, result, summary,
+  solver metadata, and requester.
+
+### APIs and frontend
+
+- [x] Add staff-only `/decisions/config`, `/metadata`, `/resources`, `/scenarios`,
+  actions, simulate, compare, history, and detail APIs.
+- [x] Add protected `/decisions` and `/decisions/[id]` routes with scenario
+  creation, action planning, resource assumptions, target-cell map, simulation
+  results, and strategy comparison.
+- [x] Add typed API/types/helpers, routing/nav/dashboard/landing integration, and
+  frontend tests.
+
+### Verification and documentation
+
+- [x] Run backend unit/API/engine/constraint/migration/config tests.
+- [x] Run frontend typecheck, lint, Vitest, and production build.
+- [x] Apply `0011` live; verify `alembic current/check`.
+- [x] Live API validation with disposable users, scenarios, resources, actions,
+  simulations, and cleanup.
+- [x] Headless-Chrome validation of dashboard, workspace, target map, simulation,
+  comparison, and dashboard link.
+- [x] Document safety, resource assumptions, solver limits, APIs, and RLS.
 
 ## Phase 5 implementation checklist
 
@@ -202,6 +250,37 @@ intelligence`). Phase 5 is committed as the checkpoint before Phase 6.
 - [x] Run typecheck, lint, Vitest, build, pytest, Alembic checks.
 - [x] Run live storage/map/browser validation and clean up test data.
 - [x] Update README, API docs, spatial/evidence docs, env docs, and acceptance report.
+
+## Phase 6 scope implemented
+
+### Decision model
+
+- `decision-v1` (`0.6.0`) separates planning scenarios from the legacy generic
+  `scenarios` tables. Scenarios carry hazard, horizon, optional budget,
+  resolution, risk window, and staff owner.
+- Actions model type, priority, earliest start, duration, target H3/asset,
+  department, expected reduction, known/unknown cost, dependencies, assumptions,
+  and resource requirements.
+- Resources model explicit availability, source, as-of timestamp, allocation
+  mode, unit, and department. UNKNOWN is the default; PLANNING_ASSUMPTION is a
+  labeled planning status, not verified inventory.
+
+### Simulation and comparison
+
+- The bounded scheduler respects dependencies, horizon, earliest starts, shared
+  capacity, consumable capacity, optional budget, and target risk caps. It
+  evaluates four heuristic strategies and reports objective components.
+- Solver time limits, elapsed time, timeout state, and algorithm are returned;
+  no optimality claim is made.
+- Every result includes false `execution_authorized`, `dispatch_performed`, and
+  `reservations_created` flags. No operational record is mutated.
+
+### Frontend
+
+- `/decisions` creates/selects scenarios and records explicit planning resources.
+- `/decisions/[id]` shows target H3 cells on a MapLibre overlay, action planning,
+  resource assumptions, simulation metrics/action plan, warnings, limitations,
+  and strategy comparison.
 
 ## Phase 5 scope implemented
 
@@ -367,30 +446,30 @@ cd ..
 
 Latest recorded results:
 
-- Backend: **136 passed** (Phase 5 final adversarial-review run; update if the
-  suite changes).
-- Alembic: live revision `0010_risk_factor_default`; `alembic check` reports
+- Backend: **148 passed** (Phase 6 final run; update if the suite changes).
+- Alembic: live revision `0011_decision_intelligence`; `alembic check` reports
   **No new upgrade operations detected** (custom PostGIS type warnings only).
-- Frontend: typecheck, ESLint, **57 tests** (17 files), and production build
+- Frontend: typecheck, ESLint, **61 tests** (19 files), and production build
   pass.
-- `scripts/verify.ps1` passes (run after the Phase 5 verification suite).
+- `scripts/verify.ps1` passes (run after the Phase 6 verification suite).
 
 ## Live validation evidence
 
 - Live PostgreSQL 17.12 + PostGIS 3.3.7, all migrations applied through
-  `0010_risk_factor_default`.
-- 17 application tables, 21 application RLS policies, 9 triggers, 19 foreign
-  keys, 7 unique constraints, 5 GIST indexes. RLS is enabled on all 17
+  `0011_decision_intelligence`.
+- 22 application tables, 26 application RLS policies, 9 triggers, 29 foreign
+  keys, 8 unique constraints, 5 GIST indexes. RLS is enabled on all 22
   application tables. Evidence MIME/size constraints, the evidence composite
   index, normalized Phase 4 relationship CHECKs, and Phase 5 risk-run indexes
   are present.
 - Private `incident-evidence` Storage bucket exists with `public=false`,
   10 MB limit, and JPEG/PNG/WebP allowlist.
-- ACLs after `0010`: `anon` has no application-table privileges;
-  `authenticated` has SELECT on all 17 application tables, INSERT on incidents
-  and scenarios, column UPDATE only on `profiles.full_name/phone`, and no direct
-  INSERT on `incident_evidence`, `incident_relationships`,
-  `risk_model_runs`, or `risk_cell_snapshots`.
+- ACLs after `0011`: `anon` has no application-table privileges;
+  `authenticated` has SELECT on all 22 application tables, INSERT on incidents
+  and generic scenarios, column UPDATE only on `profiles.full_name/phone`, and
+  no direct INSERT on `incident_evidence`, `incident_relationships`,
+  `risk_model_runs`, `risk_cell_snapshots`, or the five decision-planning
+  tables.
 - Real isolated Auth users completed sign-in with ES256 tokens, backend JWKS
   verification, profile provisioning, `/auth/me`, role changes, and cleanup.
 - Real API validation covered report creation, Citizen scoping, Worker/Admin
@@ -402,6 +481,14 @@ Latest recorded results:
   privacy, staff-only review, relationship persistence/uniqueness, citizen
   relationship hiding, opaque 404 intelligence access, PostGIS asset proximity,
   inferred-impact labeling, authenticated asset listing, and cleanup to zero.
+- Phase 6 live API validation (disposable users/scenario/resources/actions):
+  versioned config, explicit UNKNOWN/PLANNING_ASSUMPTION resources, unknown
+  blocking, scheduled planning action, four-strategy comparison, persistence,
+  non-decrementing resource quantities, false dispatch/reservation flags,
+  Citizen 403, unauthenticated 401, and cleanup to zero.
+- Phase 6 live headless-Chrome validation: `/decisions` dashboard, scenario
+  workspace, target-cell map, action list, simulation metrics/action plan,
+  strategy comparison, and dashboard link. A screenshot was captured.
 - Phase 5 live API validation (disposable users/incidents/assets/dependency
   edge): H3 cells and GeoJSON, all factor keys, PostGIS bbox filtering,
   infrastructure/dependency exposure, summary/trends, Citizen privacy and
@@ -460,20 +547,23 @@ Latest recorded results:
   sub-distributions are not independently suppressed inside an eligible cell.
 - Infrastructure exposure/dependencies are geospatial associations, not proven
   outages or cascades. Repository assets are development data unless replaced.
-- No scenario simulation, notification delivery, admin dashboard, or department
-  management.
+- Phase 6 simulation is a bounded heuristic, not an optimal solver or outcome
+  prediction. Expected reductions, durations, and costs are planner inputs.
+- No authoritative resource inventory, notification delivery, admin dashboard,
+  or department management.
 - Departments and authoritative infrastructure data must be loaded out of band.
 - OSM public raster tiles are used for this phase; production tile usage must be
   reviewed separately.
-- Phase 5 is committed as the Phase 6 checkpoint. Environment files remain
-  untracked/ignored.
+- Phase 5 is committed as `640f173`. Phase 6 is intentionally uncommitted for
+  review. Environment files remain untracked/ignored.
 
 ## Suggested next goals
 
 1. Apply the documented `storage.objects` visibility policy through a role that
    owns the hosted table, then verify direct signed-URL-free access.
 2. Authoritative municipal asset/dataset ingestion with provenance and freshness.
-3. Scenario simulation, dependency optimization, and notification delivery.
+3. Calibrated outcome evaluation, notification delivery, and administrative
+   management for decisions, resources, and departments.
 4. Admin operations UI, department management, and audit export.
 5. Re-run public signup -> email confirmation -> sign-in after the Supabase
    email rate limit resets.

@@ -19,7 +19,10 @@ describe("protected routing", () => {
     expect(isProtectedPath("/map")).toBe(true);
     expect(isProtectedPath("/risk")).toBe(true);
     expect(isProtectedPath("/risk/cells/abc")).toBe(true);
+    expect(isProtectedPath("/decisions")).toBe(true);
+    expect(isProtectedPath("/decisions/abc")).toBe(true);
     expect(isProtectedPath("/risky")).toBe(false);
+    expect(isProtectedPath("/decisionish")).toBe(false);
     expect(isProtectedPath("/maplike")).toBe(false);
     expect(isProtectedPath("/dashboardish")).toBe(false);
     expect(isProtectedPath("/login")).toBe(false);
