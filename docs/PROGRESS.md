@@ -1,6 +1,6 @@
 # CivicFlow progress
 
-Last updated: 2026-11-24
+Last updated: 2026-11-25
 
 ## Status
 
@@ -23,13 +23,15 @@ Last updated: 2026-11-24
 | Phase 7 — operational maturity | COMPLETE — committed as `e4a3ab6` | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
 | Phase 8 — real-world validation | COMPLETE — committed as `62c2e02` | Migration `0016`, NYC 311 snapshot + provenance, rolling-origin risk backtest vs 4 baselines, sensitivity, synthetic correlation/planning evidence, validation dashboard/report CLI, live API + browser runs |
 | Phase 9 — model diagnosis and external validation | COMPLETE — awaiting review | Migration `0017`, 4 multi-region snapshots, factor audit, 19-variant ablation, robustness suite, bootstrap/sign tests, pre-registered candidate evaluated on 3 holdouts and not activated, research report + `/validation` extension, live API + browser runs |
+| Phase 10 — research-to-operations readiness | COMPLETE — ready for review | Migrations `0018`/`0019`, controlled pilot lifecycle, human review, traceability/export, correlation review with explicit provenance, metadata registry, simulation audit, 15-category readiness gate, `/pilot` workspace, live API/browser checks |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
 intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
 `a9d6923`. Phase 7 is committed as `e4a3ab6`. Phase 8 is committed as `62c2e02`.
-Phase 9 is committed for review without rewriting prior history.
+Phase 9 is committed for review without rewriting prior history. Phase 10 is
+implemented and verified without activating a model or a pilot.
 
 ## Phase 4 implementation checklist
 
@@ -500,19 +502,19 @@ cd ..
 .\scripts\verify.ps1
 ```
 
-Latest recorded results:
+Latest recorded results (Phase 10):
 
-- Backend: **163 passed** (Phase 7 adversarial-audit final run).
-- Alembic: live revision `0015_ingested_provenance`; `alembic check` reports
+- Backend: **214 passed**.
+- Alembic: live revision `0019_phase10_correlation`; `alembic check` reports
   **No new upgrade operations detected** (custom PostGIS type warnings only).
-- Frontend: typecheck, ESLint, **63 tests** (20 files), and production build
-  pass.
-- `scripts/verify.ps1` passes (run after the Phase 7 verification suite).
+- Frontend: typecheck, ESLint, **80 tests** (25 files), and the 18-route
+  production build pass.
+- `scripts/verify.ps1` passes (Phase 10 final run).
 
-## Live validation evidence
+## Historical live validation evidence (Phases 3–7)
 
-- Live PostgreSQL 17.12 + PostGIS 3.3.7, all migrations applied through
-  `0015_ingested_provenance`.
+- At the Phase 7 checkpoint, live PostgreSQL 17.12 + PostGIS 3.3.7 had all
+  migrations applied through `0015_ingested_provenance`.
 - 35 application tables, 39 application RLS policies, 9 triggers, 53 foreign
   keys, 13 unique constraints, 5 GIST indexes. RLS is enabled on all 35
   application tables, including all 13 Phase 7 tables. Evidence MIME/size constraints, the evidence composite
@@ -739,6 +741,98 @@ Latest recorded results:
 - [x] Headless Chrome `/validation`: Phase 9 cards, executive summary, dataset
   selector, band counts, and report download (`154,222` bytes, 23 keys) verified
   with no console errors.
+
+## Phase 10 implementation checklist
+
+### Audit and scope
+
+- [x] Audited the repository, Phase 7–9 migrations, readiness/research records,
+  API, RBAC/RLS, and `/validation` before changing code.
+- [x] Confirmed Phase 10 is governance/accountability/readiness, not a
+  model-performance or activation phase.
+- [x] Preserved Phase 8/9 research data and `/validation`; added the separate
+  staff `/pilot` workspace.
+
+### Controlled pilot and human review
+
+- [x] Added 11 additive Phase 10 tables with FKs, unique/check constraints,
+  bounded indexes, staff-only RLS, and five append-only event tables.
+- [x] Implemented `DRAFT -> PENDING_APPROVAL -> APPROVED -> ACTIVE` plus pause,
+  resume, complete, archive, reject, and validated denial paths.
+- [x] Enforced ADMIN ownership/reviewers, separation of duties on approval and
+  activation, timezone-safe windows, and a readiness gate on activation.
+- [x] Added risk-review cases tied to run/cell/pilot, validated status
+  transitions, assigned-reviewer or ADMIN decisions, required notes/requested
+  evidence, and append-only event history.
+- [x] Reviews never modify risk scores, factors, or hazard state; server derives
+  reviewer identity and enforces authorization.
+
+### Traceability, correlation, infrastructure, simulation
+
+- [x] Added read-only assessment traceability linking model/config, inputs,
+  datasets, factor contributions, spatial cells, time window, reviews, pilot
+  context, and explicit missing provenance; JSON export included.
+- [x] Added candidate registration, one label per reviewer, majority
+  aggregation, precision/agreement, and explicit null recall/F1/TN/FN unless a
+  complete attested reference universe exists.
+- [x] Fixed the adversarial finding that metrics hardcoded
+  `is_simulated: false`: every candidate now requires explicit
+  `synthetic_fixture` provenance, migration `0019` persists it, and metrics
+  expose `SYNTHETIC`/`OPERATIONAL`/`MIXED`/`UNKNOWN`.
+- [x] Added a metadata-only seven-domain infrastructure registry with license,
+  coverage, CRS, schema, SHA-256, retrieval, limitations, and validation events;
+  no URL fetching, asset ingestion, or availability claim.
+- [x] Added read-only simulation audit preserving UNKNOWN resources, false
+  dispatch/allocation flags, and `SIMULATED` labels; no execution authorization.
+
+### Readiness, API, and frontend
+
+- [x] Added the 15-category scorecard (11 mandatory, 4 advisory), evidence
+  attestations, blockers/owners, and `NOT_READY` / `CONDITIONALLY_READY` /
+  `READY_FOR_CONTROLLED_PILOT` aggregation. No PASS or pilot activation is
+  hardcoded.
+- [x] Added bounded, validated staff/admin endpoints with the shared error
+  envelope and server-side role checks.
+- [x] Added `/pilot` with readiness, pilots, review queue, correlation,
+  traceability, infrastructure, and simulation tabs; loading/empty/error,
+  mobile overflow, keyboard-accessible details, and API-derived labels.
+- [x] Added frontend types/API/tests without changing `/validation` scope.
+
+### Verification and security
+
+- [x] Backend: **214 passed**; targeted Phase 10 API/migration tests pass.
+- [x] Frontend: **80 tests / 25 files**; typecheck, ESLint, and production build
+  pass (18 routes).
+- [x] Live Supabase at `0019_phase10_correlation`; 11 policies, 5 append-only
+  triggers, and the provenance column verified.
+- [x] Live API: **20/20 checks** passed before fixture cleanup, including
+  spoofed identity rejection, role isolation, null recall/TN, no asset data,
+  and no accidental model activation. After `0019`, live migration/drift/state
+  checks and automated API tests were re-run.
+- [x] Browser workflow on a disposable SQLite database verified pilot approval
+  without activation, human review, correlation labelling, infrastructure
+  verification, trace export, and truthful readiness denial after cleanup.
+- [x] Adversarial checks covered unauthorized activation, privilege escalation,
+  impersonation, audit/evidence tampering, false readiness, synthetic-as-real
+  claims, fake recall, missing provenance, stale data, wrong transitions, RLS
+  bypass, injection, unbounded pagination, and frontend bypass.
+- [x] Documented implementation, API, lifecycle, review protocol, scorecard,
+  security, adversarial fixes, deployment, limitations, and unresolved gaps.
+- [x] No model activation, pilot activation, dispatch, alert, allocation, or
+  destructive migration was performed.
+
+### Honest limitations
+
+- Live Phase 10 tables remain empty after fixture cleanup; the browser workflow
+  is disposable, synthetic evidence, not production usage.
+- Live readiness is `NOT_READY`: freshness failed (511 days), model-versus-
+  baseline failed (0/4), human review/correlation/infrastructure/governance/
+  operational constraints are blocked, and four advisory categories are
+  `NOT_ASSESSED`.
+- The live `model_versions` registry and risk runs are empty; Phase 9 persisted
+  research does not establish production model readiness.
+- Correlation metrics are reviewer sample judgments; recall/F1 remain unknown
+  without a complete reference universe, and true negatives are not fabricated.
 
 ## Known boundaries
 

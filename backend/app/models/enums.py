@@ -289,3 +289,75 @@ class ValidationStatus(str, Enum):
     COMPLETED = "COMPLETED"
     INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
     FAILED = "FAILED"
+
+
+class PilotStatus(str, Enum):
+    DRAFT = "DRAFT"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    COMPLETED = "COMPLETED"
+    REJECTED = "REJECTED"
+    ARCHIVED = "ARCHIVED"
+
+
+class PilotMode(str, Enum):
+    """Phase 10 never enables real operational activation."""
+
+    SIMULATION = "SIMULATION"
+    STAGING = "STAGING"
+
+
+class PilotTransitionAction(str, Enum):
+    CREATE = "CREATE"
+    SUBMIT = "SUBMIT"
+    APPROVE = "APPROVE"
+    REJECT = "REJECT"
+    ACTIVATE = "ACTIVATE"
+    PAUSE = "PAUSE"
+    RESUME = "RESUME"
+    COMPLETE = "COMPLETE"
+    ARCHIVE = "ARCHIVE"
+
+
+class PilotReviewerRole(str, Enum):
+    REVIEWER = "REVIEWER"
+    OBSERVER = "OBSERVER"
+
+
+class RiskReviewStatus(str, Enum):
+    UNREVIEWED = "UNREVIEWED"
+    IN_REVIEW = "IN_REVIEW"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    NEEDS_INVESTIGATION = "NEEDS_INVESTIGATION"
+    NEEDS_MORE_DATA = "NEEDS_MORE_DATA"
+
+
+class CorrelationDecision(str, Enum):
+    DUPLICATE = "DUPLICATE"
+    NOT_DUPLICATE = "NOT_DUPLICATE"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+
+class InfrastructureValidationStatus(str, Enum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"
+    REJECTED = "REJECTED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class ReadinessStatus(str, Enum):
+    NOT_ASSESSED = "NOT_ASSESSED"
+    BLOCKED = "BLOCKED"
+    IN_PROGRESS = "IN_PROGRESS"
+    PASS = "PASS"
+    FAIL = "FAIL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class ReadinessOverall(str, Enum):
+    NOT_READY = "NOT_READY"
+    CONDITIONALLY_READY = "CONDITIONALLY_READY"
+    READY_FOR_CONTROLLED_PILOT = "READY_FOR_CONTROLLED_PILOT"

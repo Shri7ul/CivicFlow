@@ -61,6 +61,17 @@ EXPECTED_TABLES = {
     "decision_review_events",
     "validation_datasets",
     "validation_experiments",
+    "pilots",
+    "pilot_reviewers",
+    "pilot_transitions",
+    "risk_review_cases",
+    "risk_review_events",
+    "correlation_candidates",
+    "correlation_reviews",
+    "infrastructure_sources",
+    "infrastructure_source_events",
+    "readiness_evidence",
+    "readiness_evidence_events",
 }
 
 

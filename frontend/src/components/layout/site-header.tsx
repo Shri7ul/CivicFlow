@@ -34,7 +34,7 @@ function LogoMark() {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-950/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-4 px-5 sm:px-8">
         <Link
           href="/"
           className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
@@ -52,7 +52,7 @@ export function SiteHeader() {
 
         <nav
           aria-label="Primary navigation"
-          className="flex items-center gap-1 sm:gap-2"
+          className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:gap-2"
         >
           <Link
             href="/#status"
@@ -65,6 +65,12 @@ export function SiteHeader() {
             className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:text-white sm:block"
           >
             Architecture
+          </Link>
+          <Link
+            href="/pilot"
+            className="rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-300/90 transition hover:bg-emerald-400/10 hover:text-emerald-200 sm:px-3 sm:text-sm"
+          >
+            Pilot readiness
           </Link>
           <a
             href={`${getApiBaseUrl()}/docs`}

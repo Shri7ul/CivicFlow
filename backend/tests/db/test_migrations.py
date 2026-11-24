@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0017_phase9_diagnostics"
+    assert version == "0019_phase10_correlation"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -124,6 +124,8 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0015_ingested_record_provenance.py",
         "0016_validation_workspace.py",
         "0017_phase9_diagnostics.py",
+        "0018_phase10_pilot_governance.py",
+        "0019_phase10_correlation.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -193,3 +195,16 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "ix_validation_experiments_protocol" in diagnostics
     assert "RISK_DIAGNOSTIC" in diagnostics
     assert "0016_validation_workspace" in diagnostics
+    phase10 = versions[17].read_text(encoding="utf-8")
+    assert "pilots" in phase10
+    assert "risk_review_cases" in phase10
+    assert "correlation_candidates" in phase10
+    assert "infrastructure_sources" in phase10
+    assert "readiness_evidence" in phase10
+    assert "civicflow_prevent_append_only_mutation" in phase10
+    assert "PHASE10_TABLES" in phase10
+    assert "0017_phase9_diagnostics" in phase10
+    provenance = versions[18].read_text(encoding="utf-8")
+    assert "synthetic_fixture" in provenance
+    assert "correlation_candidates" in provenance
+    assert "0018_phase10_pilot_governance" in provenance

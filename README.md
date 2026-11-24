@@ -12,8 +12,12 @@ incident intelligence), **Phase 5** (H3 urban risk engine), **Phase 6**
 (decision intelligence and scenario planning), **Phase 7** (operational
 maturity, model governance, evaluation, data quality, alerts, and approvals),
 **Phase 8** (reproducible public-data validation, baseline backtesting, and
-explicit experiment evidence), and **Phase 9** (model diagnosis, factor
-ablation, multi-region external validation, and research reporting).
+explicit experiment evidence), **Phase 9** (model diagnosis, factor
+ablation, multi-region external validation, and research reporting), and
+**Phase 10** (controlled pilot governance, human risk review, assessment
+traceability, reviewer-verified correlation evaluation, infrastructure
+metadata readiness, simulation constraint auditing, and a gated readiness
+scorecard).
 
 Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
 ingestion, leakage-safe rolling-origin risk backtesting against four baselines,
@@ -177,6 +181,50 @@ current status, verification evidence, and known boundaries.
 - CLIs: `backend/scripts/run_phase9_research.py` and
   `backend/scripts/generate_phase9_report.py`. See
   [backend/docs/phase9.md](backend/docs/phase9.md).
+
+### Phase 10 — research-to-operations readiness
+
+- Controlled pilot records with explicit `DRAFT → PENDING_APPROVAL → APPROVED
+  → ACTIVE → PAUSED/COMPLETED` lifecycle, validated transitions, and
+  append-only transition audit. Creation is not approval and approval is not
+  activation.
+- Separation of duties: the creator/owner cannot approve; the approver cannot
+  activate; activation and resume require a READY scorecard plus pilot-specific
+  checks. No model activation or dispatch path is added.
+- Human-in-the-loop review over persisted H3 assessment cells with
+  `UNREVIEWED`, `IN_REVIEW`, `ACCEPTED`, `REJECTED`, `NEEDS_INVESTIGATION`, and
+  `NEEDS_MORE_DATA` states. Reviewer identity comes from the JWT profile;
+  decisions are timestamped, append-only, and never change the risk score.
+- Read-only assessment trace linking a run to its model/config, query inputs,
+  spatial units, factor contributions, reviews and pilot context. Missing
+  provenance is explicit, and a structured JSON export is available.
+- Reviewer-verified correlation candidates with majority labels, precision,
+  F1, agreement and a confusion matrix. Recall and true/false negatives remain
+  unknown unless a complete reference universe exists. Each candidate declares
+  explicit `synthetic_fixture` provenance; metrics report `SYNTHETIC`,
+  `OPERATIONAL`, `MIXED` or `UNKNOWN`, and synthetic fixtures are never
+  treated as ground truth.
+- Metadata-only infrastructure registry for roads, bridges, facilities, water,
+  drainage, emergency services and transit. No URL is fetched, no asset is
+  ingested, `asset_data` is always `null`, and `VERIFIED` means metadata
+  completeness only.
+- Read-only simulation audit for recorded objectives, solver constraints,
+  reproducibility, human approval and preservation of UNKNOWN resources. Every
+  result is `SIMULATED`; no dispatch or allocation is authorized.
+- Fifteen-category readiness scorecard (11 mandatory gates, 4 advisory) derived
+  from persisted evidence. No PASS is hardcoded; manual attestations require
+  admin identity and evidence. Live state is **NOT_READY**: data freshness
+  failed (latest data 511 days old), model-versus-baseline failed (0/4
+  datasets), human review, correlation and infrastructure were blocked by
+  absent evidence, and no controlled pilot exists.
+- New staff workspace `/pilot` (readiness, pilots, review queue, correlation,
+  traceability, infrastructure, simulation) with loading/empty/error states,
+  admin actions, and JSON exports. Migration `0018_phase10_pilot_governance`
+  adds 11 tables, staff-only RLS policies, and append-only triggers;
+  `0019_phase10_correlation` adds explicit candidate provenance.
+- See [backend/docs/phase10.md](backend/docs/phase10.md) for the lifecycle,
+  review protocol, metric definitions, scorecard gates, API, verification and
+  limitations.
 
 ### Phase 7 — operational maturity and intelligence validation
 
@@ -371,9 +419,10 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0017_phase9_diagnostics`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
-been exercised transactionally and with isolated real Auth users, and private
-Storage upload/signed-download was verified end to end. See
+`0019_phase10_correlation`, PostGIS 3.3.7 is installed, the RLS/ACL matrix
+has been exercised transactionally and with isolated real Auth users, the
+Phase 10 staff RLS policies and append-only triggers were checked live, and
+private Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
 `backend/docs/incidents.md` for the lifecycle contract,
 `backend/docs/spatial.md` for the viewport API,
@@ -527,6 +576,30 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `GET` | `/api/v1/governance/models/{id}/events` | Model lifecycle audit events |
 | `GET` | `/api/v1/governance/models/{left}/compare/{right}` | Configuration/evaluation version comparison |
 | `POST` `GET` | `/api/v1/governance/evaluations` | Persist/list labelled evaluation results |
+| `GET` | `/api/v1/governance/readiness` | Derived 15-category pilot readiness scorecard |
+| `GET` `POST` | `/api/v1/governance/readiness/evidence` | Read or ADMIN-attest advisory evidence |
+| `GET` `POST` | `/api/v1/governance/pilots` | Staff pilot list / ADMIN pilot creation |
+| `GET` | `/api/v1/governance/pilots/{id}` | Pilot detail, reviewers, allowed actions, history |
+| `POST` | `/api/v1/governance/pilots/{id}/reviewers` | ADMIN assign a pilot reviewer |
+| `POST` | `/api/v1/governance/pilots/{id}/transition` | ADMIN validated lifecycle action |
+| `GET` | `/api/v1/governance/pilots/{id}/history` | Append-only pilot transition history |
+| `GET` | `/api/v1/governance/pilots/{id}/readiness` | Scorecard plus pilot-specific checks |
+| `GET` `POST` | `/api/v1/governance/reviews` | Staff review queue / open a review case |
+| `GET` | `/api/v1/governance/reviews/{id}` | Review case, assessment and factor evidence |
+| `GET` | `/api/v1/governance/reviews/{id}/events` | Timestamped reviewer decision history |
+| `POST` | `/api/v1/governance/reviews/{id}/decisions` | Assigned reviewer/ADMIN decision |
+| `GET` `POST` | `/api/v1/governance/correlation/candidates` | Staff candidate list / ADMIN creation (explicit `synthetic_fixture`) |
+| `POST` | `/api/v1/governance/correlation/candidates/{id}/reviews` | Independent reviewer label |
+| `GET` | `/api/v1/governance/correlation/metrics?universe_key=` | Precision/F1/agreement with explicit unknown recall |
+| `GET` | `/api/v1/governance/correlation/summary` | Candidate review counts |
+| `GET` `POST` | `/api/v1/governance/infrastructure/sources` | Metadata-only registry / ADMIN registration |
+| `GET` | `/api/v1/governance/infrastructure/sources/{id}` | Source metadata and validation history |
+| `POST` | `/api/v1/governance/infrastructure/sources/{id}/validation` | ADMIN metadata verification decision |
+| `GET` | `/api/v1/governance/infrastructure/coverage` | Seven-domain metadata coverage; no asset data |
+| `GET` | `/api/v1/governance/simulation/audit` | Read-only simulation constraint audit |
+| `GET` | `/api/v1/governance/traceability/runs` | Persisted risk assessment list with review counts |
+| `GET` | `/api/v1/governance/traceability/runs/{id}` | Read-only model/input/factor/review trace |
+| `GET` | `/api/v1/governance/traceability/runs/{id}/export` | Structured JSON trace attachment |
 | `GET` `POST` | `/api/v1/operations/sources` | Source registry / ADMIN registration |
 | `GET` `POST` | `/api/v1/operations/sources/{id}/runs` | Run history / idempotent manual ingestion |
 | `GET` | `/api/v1/operations/quality` | Source freshness and quality |
@@ -914,6 +987,14 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Robustness, bootstrap intervals, and sign tests | Complete; descriptive statistics, intervals reported as such |
 | Candidate selection and model decision | Complete; `drop_trend` evaluated on 3 holdouts, retained unchanged, `NOT_ACTIVATED` |
 | Phase 9 research report and dashboard extension | Complete; 18-section report and persisted-data-only UI |
+| Controlled pilot lifecycle and separation of duties | Complete; API + browser tested on disposable DB; live Supabase refused unauthorized/empty state |
+| Human-in-the-loop risk review and append-only audit | Complete; API + browser tested on disposable DB; live Supabase read-only/empty state |
+| Assessment traceability and structured export | Complete; API + browser tested on disposable DB; live Supabase has no risk runs |
+| Reviewer-verified correlation evaluation | Complete; API + browser tested with synthetic fixtures; not empirical ground truth |
+| Metadata-only infrastructure readiness registry | Complete; API + browser tested on disposable DB; no assets fetched anywhere |
+| Decision-simulation constraint audit | Complete; API/browser tested; live simulation set is empty |
+| 15-category readiness scorecard and activation gate | Complete; live state `NOT_READY` with 11 recorded blockers |
+| Phase 10 migration, staff RLS, append-only triggers | Applied live; 11 tables, 11 policies, 5 append-only triggers verified |
 | Authoritative municipal hazard outcomes / field labels | Not included; 311 activity is not verified impact ground truth |
 
 Phase 4 was committed and pushed as `bfc073e`
