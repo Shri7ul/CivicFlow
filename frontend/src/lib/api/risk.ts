@@ -108,3 +108,19 @@ export function getRiskInfrastructureExposure(
     `/api/v1/risk/infrastructure-exposure?${buildRiskQuery(filters)}`,
   );
 }
+
+export type RiskDataQuality = {
+  source_id: string;
+  source_key: string;
+  name: string;
+  reliability: string;
+  status: string;
+  freshness_minutes: number | null;
+  issues: string[];
+};
+
+export function getRiskDataQuality(
+  request: ApiRequester,
+): Promise<RiskDataQuality[]> {
+  return request<RiskDataQuality[]>("/api/v1/risk/data-quality");
+}

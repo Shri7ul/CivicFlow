@@ -33,5 +33,6 @@ export const config = {
     "/map/:path*",
     "/risk/:path*",
     "/decisions/:path*",
+    "/operations/:path*",
   ],
 };

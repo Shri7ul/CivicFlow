@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from time import monotonic
 from uuid import UUID
@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import Settings
-from app.decisions.config import DecisionConfig
 from app.decisions.engine import (
     ActionInput,
     DecisionError,
@@ -38,7 +37,8 @@ from app.models import (
     ResponseResource,
     SimulationStatus,
 )
-from app.risk.config import RiskConfig
+from app.governance.service import resolve_decision_config, resolve_risk_config
+from app.ingestion.service import stale_data_warnings
 from app.risk.engine import RiskEngine, RiskQuery, RiskQueryError
 
 
@@ -92,7 +92,7 @@ def _build_risk_context(
     *,
     settings: Settings,
 ) -> RiskContext:
-    risk_config = RiskConfig.from_settings(settings)
+    risk_config = resolve_risk_config(session, settings)
     query = RiskQuery(
         resolution=scenario.resolution,
         window_hours=scenario.risk_window_hours,
@@ -276,7 +276,7 @@ def simulate(
     persist: bool = True,
     requested_by: UUID | None = None,
 ) -> SimulationOutcome:
-    config = DecisionConfig.from_settings(settings)
+    config = resolve_decision_config(session, settings)
     actions, resources, risk_context = input_context(
         session, scenario, settings=settings
     )
@@ -294,6 +294,14 @@ def simulate(
             else None
         ),
     )
+    quality_warnings = stale_data_warnings(session)
+    if quality_warnings:
+        plan = replace(
+            plan,
+            warnings=tuple(
+                dict.fromkeys((*plan.warnings, *quality_warnings))
+            ),
+        )
     payload = {
         "scenario_id": str(scenario.id),
         "scenario_name": scenario.name,
@@ -365,7 +373,7 @@ def compare(
     strategies: list[DecisionStrategy],
     settings: Settings,
 ) -> dict:
-    config = DecisionConfig.from_settings(settings)
+    config = resolve_decision_config(session, settings)
     actions, resources, risk_context = input_context(
         session, scenario, settings=settings
     )
@@ -382,6 +390,14 @@ def compare(
             else None
         ),
     )
+    quality_warnings = stale_data_warnings(session)
+    if quality_warnings:
+        comparison = replace(
+            comparison,
+            warnings=tuple(
+                dict.fromkeys((*comparison.warnings, *quality_warnings))
+            ),
+        )
     payload = {
         "scenario_id": str(scenario.id),
         "scenario_name": scenario.name,
@@ -389,6 +405,7 @@ def compare(
         "config_hash": config.config_hash,
         "risk_context": risk_context_payload(risk_context),
         "comparison": comparison_payload(comparison),
+        "data_quality_warnings": stale_data_warnings(session),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     return payload

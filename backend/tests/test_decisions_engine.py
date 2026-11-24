@@ -112,6 +112,13 @@ def test_configuration_is_stable_and_validated() -> None:
         DecisionConfig(
             **{
                 **config.__dict__,
+                "weight_risk_reduction": float("nan"),
+            }
+        )
+    with pytest.raises(DecisionConfigError):
+        DecisionConfig(
+            **{
+                **config.__dict__,
                 "weight_risk_reduction": 0.9,
             }
         )

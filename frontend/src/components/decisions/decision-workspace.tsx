@@ -14,6 +14,10 @@ import {
   simulateDecisionScenario,
 } from "@/lib/api/decisions";
 import {
+  listScenarioReviews,
+  submitScenarioReview,
+} from "@/lib/api/operations";
+import {
   actionStatusTone,
   formatMinutes,
   formatMoney,
@@ -35,6 +39,7 @@ import type {
   SimulationListItem,
   SimulationResponse,
 } from "@/types/decisions";
+import type { ReviewRecord } from "@/types/operations";
 
 const control =
   "w-full rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-emerald-400/50";
@@ -105,6 +110,7 @@ export function DecisionWorkspace({ scenarioId }: { scenarioId: string }) {
   const [scenario, setScenario] = useState<ScenarioDetail | null>(null);
   const [resources, setResources] = useState<ResponseResource[]>([]);
   const [history, setHistory] = useState<SimulationListItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [simulation, setSimulation] = useState<SimulationResponse | null>(null);
   const [comparison, setComparison] = useState<ComparisonResponse | null>(null);
   const [strategy, setStrategy] = useState<DecisionStrategy>("BALANCED");
@@ -122,14 +128,17 @@ export function DecisionWorkspace({ scenarioId }: { scenarioId: string }) {
   const [quantity, setQuantity] = useState("1");
 
   const reload = useCallback(async () => {
-    const [nextScenario, nextResources, nextHistory] = await Promise.all([
-      getDecisionScenario(apiRequest, scenarioId),
-      listResponseResources(apiRequest),
-      listDecisionSimulations(apiRequest, scenarioId),
-    ]);
+    const [nextScenario, nextResources, nextHistory, nextReviews] =
+      await Promise.all([
+        getDecisionScenario(apiRequest, scenarioId),
+        listResponseResources(apiRequest),
+        listDecisionSimulations(apiRequest, scenarioId),
+        listScenarioReviews(apiRequest, scenarioId),
+      ]);
     setScenario(nextScenario);
     setResources(nextResources);
     setHistory(nextHistory);
+    setReviews(nextReviews);
     setResourceId((current) => current || nextResources[0]?.id || "");
   }, [apiRequest, scenarioId]);
 
@@ -207,6 +216,25 @@ export function DecisionWorkspace({ scenarioId }: { scenarioId: string }) {
       );
     } catch (compareError) {
       setError(errorMessage(compareError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitForReview() {
+    if (!simulation?.simulation_id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await submitScenarioReview(
+        apiRequest,
+        scenarioId,
+        simulation.simulation_id,
+        "Submitted from the decision workspace for human review.",
+      );
+      setReviews(await listScenarioReviews(apiRequest, scenarioId));
+    } catch (reviewError) {
+      setError(errorMessage(reviewError));
     } finally {
       setBusy(false);
     }
@@ -612,6 +640,64 @@ export function DecisionWorkspace({ scenarioId }: { scenarioId: string }) {
               </ul>
             </div>
           </div>
+        </section>
+      ) : null}
+
+      {simulation?.simulation_id ? (
+        <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Plan review</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                A human approval records a planning decision only. It does not
+                authorize dispatch or execution.
+              </p>
+            </div>
+            {reviews.some((review) =>
+              ["SUBMITTED", "APPROVED", "REVISION_REQUESTED"].includes(
+                review.status,
+              ),
+            ) ? null : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void submitForReview()}
+                className="rounded-lg bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50"
+              >
+                Submit for review
+              </button>
+            )}
+          </div>
+          {reviews.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">No review submitted.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {reviews.map((review) => (
+                <li
+                  key={review.id}
+                  className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-400"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="font-medium text-slate-100">
+                      {review.title}
+                    </span>
+                    <span className="rounded-full border border-white/10 px-2 py-1 text-[10px]">
+                      {review.status}
+                    </span>
+                  </div>
+                  <p className="mt-1">
+                    Submitted by {review.submitted_by_name ?? "unknown"}
+                    {review.reviewed_by_name
+                      ? ` · reviewed by ${review.reviewed_by_name}`
+                      : ""}
+                  </p>
+                  {review.decision_note ? (
+                    <p className="mt-1 text-slate-500">{review.decision_note}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 

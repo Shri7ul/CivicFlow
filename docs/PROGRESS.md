@@ -19,13 +19,15 @@ Last updated: 2026-11-24
 | Phase 3 — spatial map, clustering, evidence | ACCEPTED (storage-policy limitation) | Migration `0005`, map/evidence live API + browser runs, 112 backend / 44 frontend tests |
 | Phase 4 — incident intelligence | ACCEPTED + COMMITTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
 | Phase 5 — urban risk engine | COMPLETE — committed as `640f173` | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
-| Phase 6 — decision intelligence | COMPLETE — awaiting review | Migration `0011`, scenarios/actions/resources, bounded simulation, strategy comparison, decision workspace, live API + browser runs |
+| Phase 6 — decision intelligence | COMPLETE — committed as `a9d6923` | Migration `0011`, scenarios/actions/resources, bounded simulation, strategy comparison, decision workspace, live API + browser runs |
+| Phase 7 — operational maturity | COMPLETE — awaiting review | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
-intelligence`). Phase 5 is committed as `640f173`. Phase 6 is implemented and
-intentionally left uncommitted for review.
+intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
+`a9d6923`. Phase 7 is implemented and intentionally left uncommitted for
+review.
 
 ## Phase 4 implementation checklist
 
@@ -87,6 +89,35 @@ intentionally left uncommitted for review.
 - [x] Run live headless-Chrome validation of the rendered intelligence panel.
 - [x] Clean up all disposable rows, users, assets, edges, and relationships.
 - [x] Update README, backend/frontend READMEs, auth/RLS docs, and intelligence docs.
+
+## Phase 7 implementation checklist
+
+### Governance, evaluation, and ingestion
+
+- [x] Add model registry, activation audit, config hashes, and active-model resolution.
+- [x] Add persisted labelled evaluation with threshold, ranking, calibration, temporal, and spatial slices.
+- [x] Mark synthetic fixtures explicitly; do not represent them as field performance.
+- [x] Add source registry, reliability/license/provenance metadata, adapter interfaces, and explicit unavailable external adapters.
+- [x] Add idempotent ingestion, duplicate detection, schema fingerprints, invalid/missing-field counts, and quality snapshots.
+- [x] Surface stale/degraded/unknown data to risk and decision users.
+
+### Alerts, approvals, and operations
+
+- [x] Add threshold/freshness/ingestion alert rules with cooldown/deduplication.
+- [x] Add in-app notifications, recipient scoping, preferences, and acknowledgement/resolution.
+- [x] Add human plan submission, ADMIN approval/rejection/revision, separation of duties, and immutable history.
+- [x] Keep approvals non-executing and expose false execution flags everywhere.
+- [x] Add real-data `/operations` dashboard with incidents, risk, quality, models, evaluation, alerts, planning, approvals, and health.
+- [x] Add admin-only source/rule controls and staff alert/approval interactions.
+- [x] Add protected route, navigation, and dashboard integration.
+
+### Verification and documentation
+
+- [x] Add migrations `0012`–`0015` with 13 staff-only tables, RLS, grants, constraints, indexes, hardening invariants, and downgrade.
+- [x] Add backend evaluation, governance, ingestion, alerting, dashboard, and review tests.
+- [x] Add frontend API/routing tests and type/lint/build validation.
+- [x] Run live PostgreSQL migration/RLS checks, live API validation, and headless-Chrome validation.
+- [x] Document governance, evaluation methodology, ingestion, quality, alerts, approvals, security, and limitations.
 
 ## Phase 6 implementation checklist
 
@@ -250,6 +281,29 @@ intentionally left uncommitted for review.
 - [x] Run typecheck, lint, Vitest, build, pytest, Alembic checks.
 - [x] Run live storage/map/browser validation and clean up test data.
 - [x] Update README, API docs, spatial/evidence docs, env docs, and acceptance report.
+
+## Phase 7 scope implemented
+
+### Model governance and evaluation
+
+- `model_versions` stores model name/version, full config, config hash, active flag, activation time, creator, and lifecycle events.
+- Active risk config is rehydrated for the risk API and decision risk context; historical runs retain their original version/hash.
+- Evaluation API calculates precision, recall, F1, FPR, specificity, accuracy, ROC-AUC, PR-AUC, Brier, calibration error, temporal slices, and spatial macro-F1.
+- Evaluation records persist method, dataset label, sample count, metrics, slices, warnings, and synthetic/ground-truth flags.
+
+### Ingestion, quality, and alerts
+
+- Sources record access method, license, reliability, adapter, freshness target, required fields, and provenance.
+- Manual ingestion is idempotent by source/key, deduplicates external IDs across runs, and records schema/count/error metadata.
+- Quality snapshots expose healthy/stale/degraded/unknown, freshness, invalid/duplicate/missing counts, issues, and coverage.
+- Alert rules support configurable type/operator/threshold/severity/cooldown; alerts dedupe, notify staff in-app, and have acknowledge/resolve lifecycle.
+- Notification preferences and recipient-scoped notification access are enforced.
+
+### Review and operations
+
+- Persisted simulations can enter human review; ADMIN decisions are audited and self-approval is blocked.
+- Approval never authorizes execution; response flags remain false.
+- `/operations` renders real aggregates from incidents, H3 risk, quality, model/evaluation, alerts, planning, approvals, and database health.
 
 ## Phase 6 scope implemented
 
@@ -446,30 +500,29 @@ cd ..
 
 Latest recorded results:
 
-- Backend: **148 passed** (Phase 6 final run; update if the suite changes).
-- Alembic: live revision `0011_decision_intelligence`; `alembic check` reports
+- Backend: **163 passed** (Phase 7 adversarial-audit final run).
+- Alembic: live revision `0015_ingested_provenance`; `alembic check` reports
   **No new upgrade operations detected** (custom PostGIS type warnings only).
-- Frontend: typecheck, ESLint, **61 tests** (19 files), and production build
+- Frontend: typecheck, ESLint, **63 tests** (20 files), and production build
   pass.
-- `scripts/verify.ps1` passes (run after the Phase 6 verification suite).
+- `scripts/verify.ps1` passes (run after the Phase 7 verification suite).
 
 ## Live validation evidence
 
 - Live PostgreSQL 17.12 + PostGIS 3.3.7, all migrations applied through
-  `0011_decision_intelligence`.
-- 22 application tables, 26 application RLS policies, 9 triggers, 29 foreign
-  keys, 8 unique constraints, 5 GIST indexes. RLS is enabled on all 22
-  application tables. Evidence MIME/size constraints, the evidence composite
+  `0015_ingested_provenance`.
+- 35 application tables, 39 application RLS policies, 9 triggers, 53 foreign
+  keys, 13 unique constraints, 5 GIST indexes. RLS is enabled on all 35
+  application tables, including all 13 Phase 7 tables. Evidence MIME/size constraints, the evidence composite
   index, normalized Phase 4 relationship CHECKs, and Phase 5 risk-run indexes
   are present.
 - Private `incident-evidence` Storage bucket exists with `public=false`,
   10 MB limit, and JPEG/PNG/WebP allowlist.
-- ACLs after `0011`: `anon` has no application-table privileges;
-  `authenticated` has SELECT on all 22 application tables, INSERT on incidents
+- ACLs after `0015`: `anon` has no application-table privileges;
+  `authenticated` has SELECT on all 35 application tables, INSERT on incidents
   and generic scenarios, column UPDATE only on `profiles.full_name/phone`, and
-  no direct INSERT on `incident_evidence`, `incident_relationships`,
-  `risk_model_runs`, `risk_cell_snapshots`, or the five decision-planning
-  tables.
+  no direct INSERT on evidence, relationship, risk, decision, governance,
+  ingestion, alert, notification, or review tables.
 - Real isolated Auth users completed sign-in with ES256 tokens, backend JWKS
   verification, profile provisioning, `/auth/me`, role changes, and cleanup.
 - Real API validation covered report creation, Citizen scoping, Worker/Admin
@@ -481,6 +534,14 @@ Latest recorded results:
   privacy, staff-only review, relationship persistence/uniqueness, citizen
   relationship hiding, opaque 404 intelligence access, PostGIS asset proximity,
   inferred-impact labeling, authenticated asset listing, and cleanup to zero.
+- Phase 7 live API validation (disposable admin/worker, model, source, alert,
+  review): model registration/activation audit, synthetic evaluation labelling,
+  ingestion idempotency/duplicate/missing-field reporting, alert cooldown and
+  notification delivery, second-admin plan approval with false execution flags,
+  review history, and dashboard database health; cleanup returned to zero.
+- Phase 7 live headless-Chrome validation rendered `/operations` with real
+  source, alert, governance, risk, approval, and safety state; screenshot
+  captured at `C:\Users\USER\AppData\Local\Temp\civicflow-phase7-operations.png`.
 - Phase 6 live API validation (disposable users/scenario/resources/actions):
   versioned config, explicit UNKNOWN/PLANNING_ASSUMPTION resources, unknown
   blocking, scheduled planning action, four-strategy comparison, persistence,
@@ -549,21 +610,27 @@ Latest recorded results:
   outages or cascades. Repository assets are development data unless replaced.
 - Phase 6 simulation is a bounded heuristic, not an optimal solver or outcome
   prediction. Expected reductions, durations, and costs are planner inputs.
-- No authoritative resource inventory, notification delivery, admin dashboard,
-  or department management.
-- Departments and authoritative infrastructure data must be loaded out of band.
+- Phase 7 evaluation metrics require externally supplied labels; no municipal
+  outcome dataset is included. Synthetic fixtures are test-only.
+- No authoritative resource inventory, licensed live municipal feed, external
+  notification delivery, or plan execution. External adapters remain
+  unavailable until a deployment explicitly configures and validates them.
+- Department and authoritative infrastructure data must be loaded out of band.
 - OSM public raster tiles are used for this phase; production tile usage must be
   reviewed separately.
-- Phase 5 is committed as `640f173`. Phase 6 is intentionally uncommitted for
-  review. Environment files remain untracked/ignored.
+- Phase 5 is committed as `640f173`; Phase 6 is committed as `a9d6923`. Phase 7
+  is intentionally uncommitted for review. Environment files remain
+  untracked/ignored.
 
 ## Suggested next goals
 
 1. Apply the documented `storage.objects` visibility policy through a role that
    owns the hosted table, then verify direct signed-URL-free access.
-2. Authoritative municipal asset/dataset ingestion with provenance and freshness.
-3. Calibrated outcome evaluation, notification delivery, and administrative
-   management for decisions, resources, and departments.
-4. Admin operations UI, department management, and audit export.
+2. Connect licensed authoritative municipal feeds through the ingestion adapter
+   interface and validate source contracts, coverage, and freshness targets.
+3. Obtain validated outcome labels and run field-calibrated evaluation before
+   making any predictive-performance claim.
+4. Add external notification adapters and department/administrative management
+   behind the same authorization and audit boundaries.
 5. Re-run public signup -> email confirmation -> sign-in after the Supabase
    email rate limit resets.

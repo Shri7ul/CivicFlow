@@ -18,6 +18,7 @@ const roleCapabilities: Record<string, readonly string[]> = {
     "Review duplicate and related-incident suggestions",
     "Inspect H3 risk cells, trends, and infrastructure exposure",
     "Plan response scenarios with explicit resource assumptions",
+    "Monitor data freshness, alerts, and model governance",
   ],
   ADMIN: [
     "Oversee the citywide incident queue",
@@ -25,7 +26,8 @@ const roleCapabilities: Record<string, readonly string[]> = {
     "Review explainable intelligence suggestions and relationships",
     "Inspect urban risk cells and model limitations",
     "Plan and compare response scenarios without dispatching resources",
-    "Manage application roles and privileged access",
+    "Register and activate model versions and review plans",
+    "Manage application roles, alerts, and privileged access",
   ],
 };
 
@@ -43,7 +45,7 @@ export function DashboardView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-            Phase 6 decision intelligence
+            Phase 7 operational maturity
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Welcome, {profile.full_name}

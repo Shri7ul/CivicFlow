@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Mapping
@@ -140,8 +141,11 @@ class RiskConfig:
             raise RiskConfigError(
                 "default window must be positive and <= max window"
             )
-        if self.recency_half_life_hours <= 0:
-            raise RiskConfigError("recency half-life must be positive")
+        if (
+            not math.isfinite(self.recency_half_life_hours)
+            or self.recency_half_life_hours <= 0
+        ):
+            raise RiskConfigError("recency half-life must be finite and positive")
         if self.density_saturation < 1:
             raise RiskConfigError("density saturation must be positive")
         if self.infrastructure_radius_m <= 0:
@@ -159,11 +163,18 @@ class RiskConfig:
                 "factor weights must define exactly the configured factors; "
                 f"missing={missing}, unexpected={unexpected}"
             )
-        if any(weight < 0 for weight in self.weights.values()):
-            raise RiskConfigError("factor weights must be non-negative")
+        if any(
+            not math.isfinite(weight) or weight < 0
+            for weight in self.weights.values()
+        ):
+            raise RiskConfigError(
+                "factor weights must be finite and non-negative"
+            )
         if abs(sum(self.weights.values()) - 1.0) > 1e-6:
             raise RiskConfigError("factor weights must sum to 1.0")
         thresholds = self.thresholds
+        if any(not math.isfinite(value) for value in thresholds):
+            raise RiskConfigError("risk thresholds must be finite")
         if not 0 < thresholds[0] < thresholds[1] < thresholds[2] < thresholds[3] < 100:
             raise RiskConfigError(
                 "risk thresholds must be strictly ascending within (0, 100)"
@@ -176,10 +187,16 @@ class RiskConfig:
             raise RiskConfigError(
                 "category weights must define every IncidentCategory"
             )
-        if any(not 0 <= value <= 1 for value in self.severity_weights.values()):
-            raise RiskConfigError("severity weights must be within 0..1")
-        if any(not 0 <= value <= 1 for value in self.category_weights.values()):
-            raise RiskConfigError("category weights must be within 0..1")
+        if any(
+            not math.isfinite(value) or not 0 <= value <= 1
+            for value in self.severity_weights.values()
+        ):
+            raise RiskConfigError("severity weights must be finite and within 0..1")
+        if any(
+            not math.isfinite(value) or not 0 <= value <= 1
+            for value in self.category_weights.values()
+        ):
+            raise RiskConfigError("category weights must be finite and within 0..1")
 
     @property
     def thresholds(self) -> tuple[float, float, float, float]:
@@ -221,6 +238,43 @@ class RiskConfig:
             threshold_moderate=settings.risk_threshold_moderate,
             threshold_high=settings.risk_threshold_high,
             threshold_critical=settings.risk_threshold_critical,
+        )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "RiskConfig":
+        """Rehydrate a persisted registry configuration for reproducibility."""
+        resolutions = payload.get("resolutions", {})
+        windows = payload.get("windows", {})
+        bands = sorted(payload.get("bands", []), key=lambda item: item["min_score"])
+        if len(bands) != 5:
+            raise RiskConfigError("persisted risk config must contain five bands")
+        return cls(
+            model_version=str(payload["model_version"]),
+            default_resolution=int(resolutions["default"]),
+            min_resolution=int(resolutions["min"]),
+            max_resolution=int(resolutions["max"]),
+            default_window_hours=int(windows["default_hours"]),
+            max_window_hours=int(windows["max_hours"]),
+            recency_half_life_hours=float(payload["recency_half_life_hours"]),
+            density_saturation=int(payload["density_saturation"]),
+            infrastructure_radius_m=int(payload["infrastructure_radius_m"]),
+            max_incidents=int(payload["max_incidents"]),
+            max_cells=int(payload["max_cells"]),
+            privacy_min_incidents=int(payload["privacy_min_incidents"]),
+            trend_min_incidents=int(payload["trend_min_incidents"]),
+            weights=dict(payload["weights"]),
+            threshold_low=float(bands[1]["min_score"]),
+            threshold_moderate=float(bands[2]["min_score"]),
+            threshold_high=float(bands[3]["min_score"]),
+            threshold_critical=float(bands[4]["min_score"]),
+            severity_weights={
+                IncidentSeverity(key): float(value)
+                for key, value in payload["severity_weights"].items()
+            },
+            category_weights={
+                IncidentCategory(key): float(value)
+                for key, value in payload["category_weights"].items()
+            },
         )
 
     @property

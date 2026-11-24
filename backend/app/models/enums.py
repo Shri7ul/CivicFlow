@@ -172,3 +172,89 @@ class SimulationStatus(str, Enum):
     COMPLETED = "COMPLETED"
     PARTIAL = "PARTIAL"
     FAILED = "FAILED"
+
+
+class ModelLifecycleAction(str, Enum):
+    REGISTERED = "REGISTERED"
+    ACTIVATED = "ACTIVATED"
+    DEACTIVATED = "DEACTIVATED"
+
+
+class EvaluationMethod(str, Enum):
+    HISTORICAL_BACKTEST = "HISTORICAL_BACKTEST"
+    TIME_SPLIT = "TIME_SPLIT"
+    SPATIAL = "SPATIAL"
+    CALIBRATION = "CALIBRATION"
+    SYNTHETIC_FIXTURE = "SYNTHETIC_FIXTURE"
+
+
+class EvaluationStatus(str, Enum):
+    COMPLETED = "COMPLETED"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+    FAILED = "FAILED"
+
+
+class SourceReliability(str, Enum):
+    AUTHORITATIVE = "AUTHORITATIVE"
+    VERIFIED = "VERIFIED"
+    COMMUNITY = "COMMUNITY"
+    UNVERIFIED = "UNVERIFIED"
+    PLANNING_ASSUMPTION = "PLANNING_ASSUMPTION"
+
+
+class SourceStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
+class IngestionStatus(str, Enum):
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+
+
+class DataQualityStatus(str, Enum):
+    HEALTHY = "HEALTHY"
+    STALE = "STALE"
+    DEGRADED = "DEGRADED"
+    UNKNOWN = "UNKNOWN"
+
+
+class AlertRuleType(str, Enum):
+    RISK_THRESHOLD = "RISK_THRESHOLD"
+    DATA_FRESHNESS = "DATA_FRESHNESS"
+    INGESTION_FAILURE = "INGESTION_FAILURE"
+    SYSTEM = "SYSTEM"
+
+
+class AlertSeverity(str, Enum):
+    INFO = "INFO"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+class AlertStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESOLVED = "RESOLVED"
+
+
+class NotificationChannel(str, Enum):
+    IN_APP = "IN_APP"
+
+
+class NotificationDeliveryStatus(str, Enum):
+    PENDING = "PENDING"
+    DELIVERED = "DELIVERED"
+    FAILED = "FAILED"
+
+
+class DecisionReviewStatus(str, Enum):
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REVISION_REQUESTED = "REVISION_REQUESTED"
+    SUPERSEDED = "SUPERSEDED"

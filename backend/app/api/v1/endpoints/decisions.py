@@ -30,6 +30,7 @@ from app.decisions.service import (
     load_simulation,
     simulate,
 )
+from app.governance.service import resolve_decision_config
 from app.models import (
     ActionResourceRequirement,
     DecisionAction,
@@ -64,8 +65,11 @@ from app.schemas.decisions import (
 router = APIRouter()
 
 
-def _decision_config(settings: Settings = Depends(get_settings)) -> DecisionConfig:
-    return DecisionConfig.from_settings(settings)
+def _decision_config(
+    settings: Settings = Depends(get_settings),
+    session: Session = Depends(get_db_session),
+) -> DecisionConfig:
+    return resolve_decision_config(session, settings)
 
 
 def _scenario_or_404(session: Session, scenario_id: uuid.UUID) -> DecisionScenario:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -119,8 +120,10 @@ class DecisionConfig:
             self.weight_cost_efficiency,
             self.weight_time_efficiency,
         )
-        if any(weight < 0 for weight in weights):
-            raise DecisionConfigError("decision objective weights must be non-negative")
+        if any(not math.isfinite(weight) or weight < 0 for weight in weights):
+            raise DecisionConfigError(
+                "decision objective weights must be finite and non-negative"
+            )
         if abs(sum(weights) - 1.0) > 1e-6:
             raise DecisionConfigError("decision objective weights must sum to 1.0")
 
@@ -139,6 +142,26 @@ class DecisionConfig:
             weight_action_coverage=settings.decision_weight_action_coverage,
             weight_cost_efficiency=settings.decision_weight_cost_efficiency,
             weight_time_efficiency=settings.decision_weight_time_efficiency,
+        )
+
+    @classmethod
+    def from_dict(cls, payload: Mapping) -> "DecisionConfig":
+        """Rehydrate a persisted decision model configuration."""
+        horizon = payload.get("horizon_minutes", {})
+        weights = payload.get("objective_weights", {})
+        return cls(
+            model_version=str(payload["model_version"]),
+            min_horizon_minutes=int(horizon["min"]),
+            max_horizon_minutes=int(horizon["max"]),
+            max_actions=int(payload["max_actions"]),
+            max_resources=int(payload["max_resources"]),
+            solver_time_limit_ms=int(payload["solver_time_limit_ms"]),
+            default_risk_window_hours=int(payload["default_risk_window_hours"]),
+            default_resolution=int(payload["default_resolution"]),
+            weight_risk_reduction=float(weights["risk_reduction"]),
+            weight_action_coverage=float(weights["action_coverage"]),
+            weight_cost_efficiency=float(weights["cost_efficiency"]),
+            weight_time_efficiency=float(weights["time_efficiency"]),
         )
 
     def as_dict(self) -> dict:

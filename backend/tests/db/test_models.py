@@ -46,6 +46,19 @@ EXPECTED_TABLES = {
     "response_resources",
     "decision_simulations",
     "role_change_audits",
+    "model_versions",
+    "model_version_events",
+    "model_evaluations",
+    "data_sources",
+    "ingestion_runs",
+    "ingested_records",
+    "data_quality_snapshots",
+    "alert_rules",
+    "alerts",
+    "notifications",
+    "notification_preferences",
+    "decision_reviews",
+    "decision_review_events",
 }
 
 
@@ -56,7 +69,8 @@ def test_registry_contains_all_goal_03_tables() -> None:
 def test_uuid_primary_keys_and_timezone_timestamps() -> None:
     for table_name in EXPECTED_TABLES:
         table = Base.metadata.tables[table_name]
-        assert isinstance(table.c.id.type, Uuid), table_name
+        if "id" in table.c:
+            assert isinstance(table.c.id.type, Uuid), table_name
         if "created_at" in table.c:
             assert isinstance(table.c.created_at.type, DateTime)
             assert table.c.created_at.type.timezone is True

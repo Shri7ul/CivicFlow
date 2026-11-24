@@ -66,6 +66,21 @@ const foundationItems = [
       "Bounded scheduling heuristics show reduction, coverage, cost, and blocked actions without dispatching or reserving anything.",
   },
   {
+    title: "Model governance and evaluation",
+    description:
+      "Registered configuration hashes, ADMIN activation audit, and labelled metrics with explicit synthetic-fixture and missing-data boundaries.",
+  },
+  {
+    title: "Data provenance and freshness",
+    description:
+      "Source reliability, idempotent ingestion, duplicate detection, schema fingerprints, and stale/degraded warnings shown to staff.",
+  },
+  {
+    title: "Alerts and human approvals",
+    description:
+      "Threshold alert rules, cooldowns, in-app notifications, and a second-admin plan review workflow that never executes a plan.",
+  },
+  {
     title: "Supabase authentication",
     description:
       "Signed ES256 JWT verification with JWKS rotation, expiry, issuer, audience, and claim validation.",
@@ -78,17 +93,17 @@ const foundationItems = [
 ] as const;
 
 const upcomingItems = [
-  "Notification delivery",
-  "Admin and department management",
-  "Authoritative municipal asset/dataset ingestion",
-  "Calibrated outcome evaluation for response strategies",
+  "Authoritative municipal outcome and asset datasets",
+  "Licensed live source adapters and external notification delivery",
+  "Department and administrative management",
+  "Field-calibrated response outcome evaluation",
 ] as const;
 
 const architectureCards = [
   {
     label: "Interface",
     title: "Next.js frontend",
-    status: "Risk + decisions",
+    status: "Risk + operations",
     description:
       "Protected incident queue, MapLibre incident, H3 risk, and scenario-target maps, private evidence, intelligence suggestions, and a planning workspace.",
     tags: ["Next.js", "MapLibre", "H3", "TypeScript"],
@@ -96,7 +111,7 @@ const architectureCards = [
   {
     label: "Service",
     title: "FastAPI backend",
-    status: "Risk + decision APIs",
+    status: "Governed operations APIs",
     description:
       "Verified JWTs, bounded H3 aggregation, versioned scoring, lifecycle transitions, signed Storage URLs, explainable intelligence, and bounded planning simulation.",
     tags: ["FastAPI", "H3", "PostGIS", "RBAC"],
@@ -104,9 +119,9 @@ const architectureCards = [
   {
     label: "Data",
     title: "PostgreSQL + PostGIS",
-    status: "22 tables",
+    status: "35 tables",
     description:
-      "Alembic-managed schema, PostGIS geography and GIST indexes, staff-only planning tables, RLS policies, risk snapshots, and safe seed data.",
+      "Alembic-managed schema, PostGIS geography and GIST indexes, staff-only planning and governance tables, RLS policies, risk snapshots, and safe seed data.",
     tags: ["Supabase", "PostgreSQL", "PostGIS", "Alembic"],
   },
 ] as const;
@@ -181,7 +196,7 @@ export default function HomePage() {
                 href="#status"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Explore Phase 6 status
+                Explore Phase 7 status
                 <ArrowIcon />
               </a>
               <a

@@ -67,3 +67,6 @@ pnpm-debug.log*
 
 # --- Deployment ---
 .vercel
+
+# Next.js generated agent context file
+frontend/AGENTS.md

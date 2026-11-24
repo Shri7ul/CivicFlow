@@ -8,8 +8,14 @@ currently contains **Phase 0** (application foundation), **Phase 1** (database
 architecture + authentication/authorization), **Phase 1.6** (security hardening),
 **Phase 2** (incident reporting and lifecycle management), **Phase 3**
 (spatial map, clustering, and private evidence), **Phase 4** (explainable
-incident intelligence), **Phase 5** (H3 urban risk engine), and **Phase 6**
-(decision intelligence and scenario planning).
+incident intelligence), **Phase 5** (H3 urban risk engine), **Phase 6**
+(decision intelligence and scenario planning), and **Phase 7** (operational
+maturity, model governance, evaluation, data quality, alerts, and approvals).
+
+Phase 7 adds model governance and labelled evaluation, provenance-aware
+ingestion and freshness monitoring, staff threshold alerts with in-app
+notifications, and human plan review/approval. Approval never dispatches,
+reserves, assigns, or mutates operational records.
 
 Phase 6 adds staff-only decision scenarios, explicit response-resource
 assumptions, bounded scheduling, and strategy comparison. Simulations never
@@ -86,6 +92,27 @@ current status, verification evidence, and known boundaries.
 - Real frontend routes: `/incidents`, `/incidents/new`, and
   `/incidents/[id]`, with report creation, filtering, detail, editing, staff
   actions, and lifecycle history.
+
+### Phase 7 — operational maturity and intelligence validation
+
+- Model registry and activation events with full configuration and stable
+  config hash; only ADMIN can activate a model. Active risk configuration is
+  rehydrated for risk calculations and decision risk context.
+- Labelled evaluation framework: threshold/ranking/calibration metrics,
+  time-based and spatial slices, persisted evaluation records, and explicit
+  `INSUFFICIENT_DATA` status. Synthetic fixtures are always labelled and are not
+  real-world performance evidence.
+- Source registry with reliability, license/provenance metadata, adapter
+  interfaces, idempotent ingestion runs, persistent duplicate detection,
+  schema fingerprints, invalid/missing-field counts, and quality snapshots.
+- Staff freshness/quality monitoring, stale/degraded/unknown warnings in risk
+  and decision surfaces, threshold/freshness/ingestion alerts, deduplication,
+  cooldowns, in-app notifications, and per-user preferences.
+- Human review workflow for persisted simulations: submission, approval,
+  rejection, revision request, second-admin separation of duties, immutable
+  event history, and explicit non-execution safety flags.
+- Protected `/operations` dashboard with real incident, risk, source, model,
+  evaluation, alert, planning, approval, and health data.
 
 ### Phase 6 — decision intelligence and scenario planning
 
@@ -192,6 +219,7 @@ frontend/
     map/                      Protected MapLibre incident map
     risk/                     Protected H3 risk map
     decisions/                Protected planning dashboard and scenario workspace
+    operations/               Protected operational/governance dashboard
     providers.tsx             Auth provider boundary
   src/components/auth/        Provider, guard, form, navigation, shell
   src/components/map/         Map view and report location picker
@@ -209,7 +237,7 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (22 application tables)
+    models/                   SQLAlchemy model registry (35 application tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
@@ -218,8 +246,15 @@ backend/
     services/intelligence.py  Correlation, duplicate, infrastructure, impact
     risk/                     Versioned H3 risk config, scoring, exposure, engine
     decisions/                Decision config, bounded scheduler, service
-    api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config
+    governance/               Model registry, activation, active-config resolution
+    evaluation/               Transparent classification/calibration metrics
+    ingestion/                Adapter interfaces, idempotent ingest, quality
+    operations/               Alerts, notifications, reviews, dashboard
+    api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config, quality
     api/v1/endpoints/decisions.py  Scenarios, resources, simulate, compare
+    api/v1/endpoints/governance.py  Models and evaluations
+    api/v1/endpoints/operations.py  Sources, quality, alerts, notifications, dashboard
+    api/v1/endpoints/reviews.py     Human plan review and approval
     seed.py                   Deterministic development seed
   alembic/
     versions/0001_initial_schema.py
@@ -233,6 +268,10 @@ backend/
     versions/0009_urban_risk_engine.py
     versions/0010_risk_factor_default.py
     versions/0011_decision_intelligence.py
+    versions/0012_operational_maturity.py
+    versions/0013_phase7_hardening.py
+    versions/0014_model_version_uniqueness.py
+    versions/0015_ingested_record_provenance.py
   tests/                      Config, DB, auth, API, migration, seed tests
 ```
 
@@ -247,7 +286,7 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0011_decision_intelligence`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0015_ingested_provenance`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
@@ -256,7 +295,8 @@ Storage upload/signed-download was verified end to end. See
 `backend/docs/evidence.md` for the evidence/storage boundary,
 `backend/docs/risk-engine.md` for the Phase 5 model and API contract, and
 `backend/docs/decisions.md` for the Phase 6 planning, resource, and safety
-contract.
+contract, and `backend/docs/operations.md` for Phase 7 governance, evaluation,
+ingestion, alerts, approvals, and security.
 
 ## Quick start (Windows PowerShell)
 
@@ -387,6 +427,30 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `POST` | `/api/v1/decisions/scenarios/{id}/simulate` | Bounded planning simulation, optional persistence |
 | `POST` | `/api/v1/decisions/scenarios/{id}/compare` | Four-strategy comparison |
 | `GET` | `/api/v1/decisions/scenarios/{id}/simulations[/{simulation_id}]` | Persisted simulation history/detail |
+| `POST` `GET` | `/api/v1/decisions/scenarios/{id}/reviews` | Submit/list human plan reviews |
+| `GET` | `/api/v1/decisions/reviews/pending` | Pending staff approval queue |
+| `GET` | `/api/v1/decisions/reviews/{id}` | Review state and immutable history |
+| `POST` | `/api/v1/decisions/reviews/{id}/decision` | ADMIN approve/reject/request revision |
+| `GET` | `/api/v1/governance/models` | Registered model versions |
+| `GET` | `/api/v1/governance/models/runtime` | Runtime config versus active model |
+| `POST` | `/api/v1/governance/models` | ADMIN register current config as a version |
+| `POST` | `/api/v1/governance/models/{id}/activate` | ADMIN activate and audit a version |
+| `GET` | `/api/v1/governance/models/{id}/events` | Model lifecycle audit events |
+| `GET` | `/api/v1/governance/models/{left}/compare/{right}` | Configuration/evaluation version comparison |
+| `POST` `GET` | `/api/v1/governance/evaluations` | Persist/list labelled evaluation results |
+| `GET` `POST` | `/api/v1/operations/sources` | Source registry / ADMIN registration |
+| `GET` `POST` | `/api/v1/operations/sources/{id}/runs` | Run history / idempotent manual ingestion |
+| `GET` | `/api/v1/operations/quality` | Source freshness and quality |
+| `GET` | `/api/v1/risk/data-quality` | Freshness warnings for risk consumers |
+| `GET` `POST` | `/api/v1/operations/alerts/rules` | Alert definitions / ADMIN creation |
+| `POST` | `/api/v1/operations/alerts/evaluate` | Evaluate enabled rules with cooldown |
+| `GET` | `/api/v1/operations/alerts` | Alert history |
+| `POST` | `/api/v1/operations/alerts/{id}/acknowledge` | Staff acknowledgement |
+| `POST` | `/api/v1/operations/alerts/{id}/resolve` | Staff resolution |
+| `GET` | `/api/v1/operations/notifications` | Own in-app notifications |
+| `POST` | `/api/v1/operations/notifications/{id}/read` | Mark own notification read |
+| `GET` `PUT` | `/api/v1/operations/notification-preferences` | Own delivery preferences |
+| `GET` | `/api/v1/operations/dashboard` | Real operational dashboard aggregate |
 
 A valid Supabase token without a profile receives `403 profile_required`; call
 provisioning next. Inactive profiles receive `403 account_inactive`. Role and
@@ -510,6 +574,14 @@ instead of crashing. The production build succeeds without live credentials.
 - `alembic/versions/0011_decision_intelligence.py` adds the five staff-only
   decision-planning tables, RLS policies, constraints, indexes, and a complete
   downgrade. Generic `scenarios`/`scenario_results` remain unchanged.
+- `alembic/versions/0012_operational_maturity.py` adds 13 staff-only model,
+  evaluation, source, ingestion, quality, alert, notification, and review
+  tables with RLS, SELECT-only authenticated grants, indexes, and a complete
+  downgrade. `0013` adds one-active-model and one-active-review partial unique
+  indexes and narrows notification/preferences RLS to the recipient. `0014`
+  removes the old config-hash uniqueness that made a second model version label
+  silently return the first version. `0015` persists per-record `observed_at`
+  and provenance.
 - `alembic/versions/0005_map_evidence_storage.py` adds evidence MIME/size
   constraints and a composite index, revokes direct authenticated INSERT on
   `incident_evidence`, and creates the private `incident-evidence` Storage
@@ -535,8 +607,8 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0011_decision_intelligence`; 24 public tables including the two PostGIS metadata views; 22 application tables, 26
-  application RLS policies, 9 triggers, 29 foreign keys, 8 unique constraints,
+- Alembic is at `0015_ingested_provenance`; 35 application tables, 39
+  application RLS policies, 9 triggers, 53 foreign keys, 13 unique constraints,
   and 5 GIST indexes exist (plus `alembic_version` and PostGIS
   `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
@@ -548,13 +620,21 @@ The configured Supabase project was validated on **2026-11-23**:
 - Live least-privilege hardening removed inherited `TRUNCATE`, `REFERENCES`,
   `TRIGGER`, and `MAINTAIN` grants from `anon`/`authenticated`; `service_role`
   was intentionally left unchanged. Anonymous now has no application-table
-  grants. After `0011`, authenticated has SELECT on all 22 application tables,
+  grants. After `0015`, authenticated has SELECT on all 35 application tables,
   INSERT on incidents and generic scenarios, column UPDATE on
-  `profiles.full_name/phone`
-  only, and no direct INSERT on `incident_evidence`,
-  `incident_relationships`, `risk_model_runs`, or `risk_cell_snapshots`; risk
-  snapshots and decision-planning tables are SELECT-only for authenticated and
-  never writable through the API role.
+  `profiles.full_name/phone` only, and no direct INSERT on `incident_evidence`,
+  `incident_relationships`, `risk_model_runs`, `risk_cell_snapshots`, or the
+  Phase 6/7 staff-only tables; those tables are SELECT-only for authenticated
+  and never writable through the API role.
+- Phase 7 live validation created isolated Auth users, a registered/activated
+  model version, a synthetic evaluation, an UNVERIFIED manual source with
+  idempotent ingestion, a threshold alert, in-app notification, and a
+  two-administrator plan review. It verified activation audit events, duplicate
+  and missing-field reporting, alert deduplication, non-execution approval
+  flags, review history, and dashboard health; all rows/users were deleted.
+- Phase 7 live headless-Chrome validation rendered `/operations` with a real
+  source, alert, governance, risk, approval, and safety state, and captured a
+  screenshot.
 - Phase 6 live validation created isolated Auth users, a decision scenario,
   explicit planning/unknown resources, actions, simulations, and a comparison.
   It verified staff-only access, unknown-resource blocking, planning-assumption
@@ -694,7 +774,7 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Profile provisioning / audited roles | Complete and tested |
 | Frontend auth foundation | Complete and tested |
 | Supabase RLS | Applied live; synthetic-claim policy matrix and real-user flows verified |
-| ACL least privilege | Applied live through `0011_decision_intelligence`; verified directly |
+| ACL least privilege | Applied live through `0015_ingested_provenance`; verified directly |
 | Legacy HS256 JWT path | Removed; ES256/JWKS only |
 | Incident report/list/detail/edit | Complete and tested |
 | Incident lifecycle and history | Complete and tested |
@@ -711,9 +791,12 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Staff risk runs and per-cell snapshots | Complete; live API verified |
 | Decision scenarios, response actions, and explicit resources | Complete; live API/browser verified |
 | Bounded planning simulation and strategy comparison | Complete; live API/browser verified |
-| Notifications / authoritative resource ingestion | Not implemented (future phases) |
+| Model registry, activation audit, and labelled evaluation framework | Complete; live API verified |
+| Provenance-aware ingestion, freshness, and quality monitoring | Complete; live API/browser verified |
+| Staff alerts, in-app notifications, and plan approvals | Complete; live API/browser verified |
+| Authoritative municipal outcome/resource ingestion | Not included; adapters accept only verified out-of-band data |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
-committed as `640f173`; Phase 6 is the current implementation and is uncommitted
-for review.
+committed as `640f173`; Phase 6 is committed as `a9d6923`. Phase 7 is the
+current implementation and remains uncommitted for review.

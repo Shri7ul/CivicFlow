@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0011_decision_intelligence"
+    assert version == "0015_ingested_provenance"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -118,6 +118,10 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0009_urban_risk_engine.py",
         "0010_risk_factor_default.py",
         "0011_decision_intelligence.py",
+        "0012_operational_maturity.py",
+        "0013_phase7_hardening.py",
+        "0014_model_version_uniqueness.py",
+        "0015_ingested_record_provenance.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -158,3 +162,19 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "response_resources" in decision
     assert "decision_simulations" in decision
     assert "read_staff" in decision
+    operations = versions[11].read_text(encoding="utf-8")
+    assert "model_versions" in operations
+    assert "data_sources" in operations
+    assert "alerts" in operations
+    assert "decision_reviews" in operations
+    assert "_enable_phase7_rls" in operations
+    hardening = versions[12].read_text(encoding="utf-8")
+    assert "uq_model_versions_one_active" in hardening
+    assert "uq_decision_reviews_active_simulation" in hardening
+    assert "notifications_read_recipient" in hardening
+    version_labels = versions[13].read_text(encoding="utf-8")
+    assert "uq_model_versions_name_hash" in version_labels
+    assert "DROP CONSTRAINT" in version_labels
+    provenance = versions[14].read_text(encoding="utf-8")
+    assert "observed_at" in provenance
+    assert "provenance" in provenance

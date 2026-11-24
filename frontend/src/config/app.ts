@@ -3,7 +3,7 @@ export const siteConfig = {
   title: "CivicFlow — Urban Impact & Response Intelligence",
   tagline: "Urban Impact & Response Intelligence",
   description:
-    "Report civic incidents, coordinate response, and inspect explainable H3 urban risk intelligence from one secure workspace.",
-  version: "0.6.0",
-  phase: "Phase 6",
+    "Report civic incidents, coordinate response, inspect explainable H3 risk, and govern operations from one secure workspace.",
+  version: "0.7.0",
+  phase: "Phase 7",
 } as const;

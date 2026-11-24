@@ -124,6 +124,13 @@ def test_config_is_validated_and_stable() -> None:
                 "weights": {**config.weights, "unexpected": 0.0},
             }
         )
+    with pytest.raises(RiskConfigError):
+        RiskConfig(
+            **{
+                **config.__dict__,
+                "weights": {**config.weights, "severity": float("nan")},
+            }
+        )
 
 
 def test_h3_boundary_and_geometry_helpers() -> None:

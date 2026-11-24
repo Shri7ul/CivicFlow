@@ -5,6 +5,7 @@ const INCIDENTS_PREFIX = "/incidents";
 const MAP_PATH = "/map";
 const RISK_PATH = "/risk";
 const DECISIONS_PATH = "/decisions";
+const OPERATIONS_PATH = "/operations";
 const LOGIN_PATH = "/login";
 const PROTECTED_PREFIXES = [
   DASHBOARD_PREFIX,
@@ -12,6 +13,7 @@ const PROTECTED_PREFIXES = [
   MAP_PATH,
   RISK_PATH,
   DECISIONS_PATH,
+  OPERATIONS_PATH,
 ] as const;
 
 export function isProtectedPath(pathname: string): boolean {

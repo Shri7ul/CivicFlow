@@ -7,10 +7,13 @@ from app.api.v1.endpoints import (
     auth,
     decisions,
     departments,
+    governance,
     health,
     incidents,
     infrastructure,
     intelligence,
+    operations,
+    reviews,
     risk,
 )
 
@@ -28,5 +31,14 @@ api_router.include_router(
 api_router.include_router(risk.router, prefix="/risk", tags=["risk"])
 api_router.include_router(
     decisions.router, prefix="/decisions", tags=["decisions"]
+)
+api_router.include_router(
+    reviews.router, prefix="/decisions", tags=["decision-reviews"]
+)
+api_router.include_router(
+    governance.router, prefix="/governance", tags=["governance"]
+)
+api_router.include_router(
+    operations.router, prefix="/operations", tags=["operations"]
 )
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

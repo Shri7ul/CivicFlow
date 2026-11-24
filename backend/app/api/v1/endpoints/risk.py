@@ -17,6 +17,8 @@ from app.core.exceptions import AppError
 from app.db.session import get_db_session
 from app.models import Incident, RiskCategory
 from app.risk.config import RiskConfig
+from app.governance.service import resolve_risk_config
+from app.ingestion.service import quality_overview
 from app.risk.engine import (
     RiskCellResult,
     RiskComputation,
@@ -55,8 +57,11 @@ router = APIRouter()
 WINDOW_ALIASES = {"current": None, "24h": 24, "7d": 168, "30d": 720}
 
 
-def _risk_config(settings: Settings = Depends(get_settings)) -> RiskConfig:
-    return RiskConfig.from_settings(settings)
+def _risk_config(
+    settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[Session, Depends(get_db_session)],
+) -> RiskConfig:
+    return resolve_risk_config(session, settings)
 
 
 def _window_hours(
@@ -694,6 +699,29 @@ def create_risk_run(
         config_hash=run.config_hash,
         summary=summary,
     )
+
+
+@router.get(
+    "/data-quality",
+    summary="Staff-visible data-source freshness and quality warnings",
+)
+def risk_data_quality(
+    user: Annotated[AuthenticatedUser, Depends(require_worker)],
+    session: Annotated[Session, Depends(get_db_session)],
+) -> list[dict]:
+    del user
+    return [
+        {
+            "source_id": str(item["source"].id),
+            "source_key": item["source"].source_key,
+            "name": item["source"].name,
+            "reliability": item["source"].reliability.value,
+            "status": item["status"].value,
+            "freshness_minutes": item["freshness_minutes"],
+            "issues": item["issues"],
+        }
+        for item in quality_overview(session)
+    ]
 
 
 @router.get(

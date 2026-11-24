@@ -9,6 +9,7 @@ import {
   getRiskCell,
   getRiskCellsGeoJSON,
   getRiskConfig,
+  getRiskDataQuality,
   getRiskSummary,
 } from "@/lib/api/risk";
 import {
@@ -401,6 +402,9 @@ export function RiskMapView() {
   const [data, setData] = useState<RiskGeoJSON | null>(null);
   const [summary, setSummary] = useState<RiskSummary | null>(null);
   const [config, setConfig] = useState<RiskConfig | null>(null);
+  const [quality, setQuality] = useState<
+    Awaited<ReturnType<typeof getRiskDataQuality>>
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -501,13 +505,15 @@ export function RiskMapView() {
       setLoading(true);
       setError(null);
       try {
-        const [nextData, nextSummary] = await Promise.all([
+        const [nextData, nextSummary, nextQuality] = await Promise.all([
           getRiskCellsGeoJSON(apiRequest, filters, { signal }),
           getRiskSummary(apiRequest, filters, { signal }),
+          getRiskDataQuality(apiRequest),
         ]);
         if (requestId !== requestRef.current) return;
         setData(nextData);
         setSummary(nextSummary);
+        setQuality(nextQuality);
       } catch (loadError) {
         if (
           loadError instanceof Error &&
@@ -653,6 +659,25 @@ export function RiskMapView() {
           </label>
         </div>
       </div>
+
+      {quality.some((item) => item.status !== "HEALTHY") ? (
+        <div className="mt-5 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-xs text-amber-100">
+          <p className="font-semibold">Data quality is not fully healthy.</p>
+          <ul className="mt-1 space-y-1">
+            {quality
+              .filter((item) => item.status !== "HEALTHY")
+              .map((item) => (
+                <li key={item.source_id}>
+                  {item.name}: {item.status}
+                  {item.freshness_minutes === null
+                    ? ""
+                    : ` · ${item.freshness_minutes} min old`}
+                  {item.issues.length > 0 ? ` · ${item.issues.join(" ")}` : ""}
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <SummaryCard label="Risk cells" value={String(summary?.total_cells ?? "—")} />
