@@ -9,8 +9,17 @@ architecture + authentication/authorization), **Phase 1.6** (security hardening)
 **Phase 2** (incident reporting and lifecycle management), **Phase 3**
 (spatial map, clustering, and private evidence), **Phase 4** (explainable
 incident intelligence), **Phase 5** (H3 urban risk engine), **Phase 6**
-(decision intelligence and scenario planning), and **Phase 7** (operational
-maturity, model governance, evaluation, data quality, alerts, and approvals).
+(decision intelligence and scenario planning), **Phase 7** (operational
+maturity, model governance, evaluation, data quality, alerts, and approvals),
+and **Phase 8** (reproducible public-data validation, baseline backtesting, and
+explicit experiment evidence).
+
+Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
+ingestion, leakage-safe rolling-origin risk backtesting against four baselines,
+sensitivity diagnostics, explicitly labelled synthetic correlation/planning
+evidence, append-only experiment records, a `/validation` dashboard, and
+reproducible reports. The empirical result is reported honestly: CivicFlow did
+not outperform the strongest baseline on this slice.
 
 Phase 7 adds model governance and labelled evaluation, provenance-aware
 ingestion and freshness monitoring, staff threshold alerts with in-app
@@ -92,6 +101,35 @@ current status, verification evidence, and known boundaries.
 - Real frontend routes: `/incidents`, `/incidents/new`, and
   `/incidents/[id]`, with report creation, filtering, detail, editing, staff
   actions, and lifecycle history.
+
+### Phase 8 — real-world validation and urban data
+
+- Bounded, reproducible NYC Open Data / NYC 311 snapshot
+  (`nyc311-brooklyn-2025q1`): 5,102 records, 2025 Q1, Brooklyn bbox, 12 civic
+  complaint types, normalized schema `nyc311-normalized-v1`.
+- Deterministic fetch → schema/coordinate/period validation → dedup →
+  canonical SHA-256 snapshot → existing provenance-aware ingestion → dataset
+  registry. The portal terms are recorded; no SPDX license is asserted.
+- Staff-only `validation_datasets` and `validation_experiments` tables with
+  append-only run keys, metrics, baselines, findings, limitations, and
+  reproducibility metadata.
+- Leakage-safe rolling-origin backtest of the actual Phase 5 `RiskEngine` on an
+  isolated SQLite copy: 8 folds, 672h history, 168h target, H3-9, top-10. No
+  future records enter a feature or configuration decision.
+- Four baselines: incident count, recent count, weighted count, and persistence.
+  Ranking metrics: precision@k, recall@k, ROC-AUC, PR-AUC.
+- Sensitivity diagnostics for 168h vs 336h windows, H3 resolutions 7/8/9, and
+  configured risk bands.
+- Explicitly labelled synthetic duplicate-correlation cases (precision `0.8`,
+  recall `1.0`, F1 `0.888889`) and planning simulations. Synthetic evidence is
+  never presented as field ground truth.
+- Protected `/validation` dashboard with real persisted dataset provenance,
+  baseline table, sensitivity, findings, limitations, experiment log, and JSON
+  report download.
+- Report CLI: `backend/scripts/generate_validation_report.py`.
+- **Actual result:** CivicFlow mean PR-AUC `0.884367` vs strongest baseline
+  (`baseline_recent`) `0.907690`; the persisted finding says it did not exceed
+  the baseline. See [backend/docs/validation.md](backend/docs/validation.md).
 
 ### Phase 7 — operational maturity and intelligence validation
 
@@ -286,7 +324,7 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0015_ingested_provenance`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0016_validation_workspace`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
@@ -296,7 +334,9 @@ Storage upload/signed-download was verified end to end. See
 `backend/docs/risk-engine.md` for the Phase 5 model and API contract, and
 `backend/docs/decisions.md` for the Phase 6 planning, resource, and safety
 contract, and `backend/docs/operations.md` for Phase 7 governance, evaluation,
-ingestion, alerts, approvals, and security.
+ingestion, alerts, approvals, and security, and
+`backend/docs/validation.md` for Phase 8 dataset selection, leakage controls,
+actual metrics, synthetic evidence, reports, and limitations.
 
 ## Quick start (Windows PowerShell)
 
@@ -607,9 +647,9 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0015_ingested_provenance`; 35 application tables, 39
-  application RLS policies, 9 triggers, 53 foreign keys, 13 unique constraints,
-  and 5 GIST indexes exist (plus `alembic_version` and PostGIS
+- Alembic is at `0016_validation_workspace`; 37 application tables, 41
+  application RLS policies, 58 foreign keys, 15 unique constraints, and 5 GIST
+  indexes exist (plus `alembic_version` and PostGIS
   `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
 - RLS was exercised with synthetic JWT claims inside a rolled-back transaction
@@ -632,6 +672,15 @@ The configured Supabase project was validated on **2026-11-23**:
   two-administrator plan review. It verified activation audit events, duplicate
   and missing-field reporting, alert deduplication, non-execution approval
   flags, review history, and dashboard health; all rows/users were deleted.
+- Phase 8 live validation ingested the 5,102-record NYC 311 snapshot through the
+  existing provenance-aware source pipeline, verified a validated dataset with
+  snapshot hash and portal terms, and exercised 51 API/DB/RLS checks. It
+  confirmed staff RBAC, ADMIN-only registration, append-only experiments,
+  empirical-vs-synthetic-vs-planning labels, the full baseline table, explicit
+  unfavorable findings, report hashes, non-execution flags, and Citizen RLS
+  denial. A metadata-only dataset could not fabricate records. Headless Chrome
+  rendered `/validation` with real provenance, sensitivity, limitation, and
+  synthetic-evidence sections and captured a screenshot.
 - Phase 7 live headless-Chrome validation rendered `/operations` with a real
   source, alert, governance, risk, approval, and safety state, and captured a
   screenshot.
@@ -774,7 +823,7 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Profile provisioning / audited roles | Complete and tested |
 | Frontend auth foundation | Complete and tested |
 | Supabase RLS | Applied live; synthetic-claim policy matrix and real-user flows verified |
-| ACL least privilege | Applied live through `0015_ingested_provenance`; verified directly |
+| ACL least privilege | Applied live through `0016_validation_workspace`; verified directly |
 | Legacy HS256 JWT path | Removed; ES256/JWKS only |
 | Incident report/list/detail/edit | Complete and tested |
 | Incident lifecycle and history | Complete and tested |
@@ -794,9 +843,13 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Model registry, activation audit, and labelled evaluation framework | Complete; live API verified |
 | Provenance-aware ingestion, freshness, and quality monitoring | Complete; live API/browser verified |
 | Staff alerts, in-app notifications, and plan approvals | Complete; live API/browser verified |
-| Authoritative municipal outcome/resource ingestion | Not included; adapters accept only verified out-of-band data |
+| Reproducible NYC 311 public-data snapshot and provenance | Complete; 5,102 real records, live API/browser verified |
+| Rolling-origin risk backtest vs four baselines | Complete; empirical result honestly unfavorable |
+| Synthetic correlation and planning evidence | Complete; explicitly labelled and separately reported |
+| Append-only validation experiments and reports | Complete; API, CLI, and `/validation` dashboard verified |
+| Authoritative municipal hazard outcomes / field labels | Not included; 311 activity is not verified impact ground truth |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
-committed as `640f173`; Phase 6 is committed as `a9d6923`. Phase 7 is the
-current implementation and remains uncommitted for review.
+committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7 is committed
+as `e4a3ab6`. Phase 8 is committed for review.

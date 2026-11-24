@@ -66,6 +66,9 @@ class RiskQuery:
     offset: int = 0
     min_score: float | None = None
     category: str | None = None
+    # Validation/backtesting uses a historical evaluation clock. Operational
+    # API calls leave this unset and retain the original current-time behavior.
+    as_of: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -438,6 +441,10 @@ class RiskEngine:
                     "bbox must be an ordered WGS84 bounding box",
                     code="invalid_bbox",
                 )
+        if query.as_of is not None and query.as_of.tzinfo is None:
+            raise RiskQueryError(
+                "as_of must include a timezone", code="invalid_as_of"
+            )
 
     def compute(
         self,
@@ -447,7 +454,7 @@ class RiskEngine:
     ) -> RiskComputation:
         started = time.perf_counter()
         self.validate(query)
-        now = datetime.now(timezone.utc)
+        now = query.as_of or datetime.now(timezone.utc)
         window_end = now
         window_start = now - timedelta(hours=query.window_hours)
         previous_start = window_start - timedelta(hours=query.window_hours)

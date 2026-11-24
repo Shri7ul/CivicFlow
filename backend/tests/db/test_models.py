@@ -59,6 +59,8 @@ EXPECTED_TABLES = {
     "notification_preferences",
     "decision_reviews",
     "decision_review_events",
+    "validation_datasets",
+    "validation_experiments",
 }
 
 

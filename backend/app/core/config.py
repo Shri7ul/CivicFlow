@@ -132,6 +132,14 @@ class Settings(BaseSettings):
     decision_weight_cost_efficiency: float = Field(default=0.15, ge=0.0, le=1.0)
     decision_weight_time_efficiency: float = Field(default=0.15, ge=0.0, le=1.0)
 
+    # Phase 8 empirical validation
+    validation_max_records: int = Field(default=10000, ge=100, le=50000)
+    validation_max_folds: int = Field(default=8, ge=2, le=24)
+    validation_target_hours: int = Field(default=168, ge=24, le=720)
+    validation_history_hours: int = Field(default=672, ge=168, le=2160)
+    validation_top_k: int = Field(default=10, ge=5, le=100)
+    validation_resolution: int = Field(default=9, ge=7, le=9)
+
     @field_validator("app_name")
     @classmethod
     def _validate_app_name(cls, value: str) -> str:

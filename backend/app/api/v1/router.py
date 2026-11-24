@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     operations,
     reviews,
     risk,
+    validation,
 )
 
 api_router = APIRouter()
@@ -40,5 +41,8 @@ api_router.include_router(
 )
 api_router.include_router(
     operations.router, prefix="/operations", tags=["operations"]
+)
+api_router.include_router(
+    validation.router, prefix="/validation", tags=["validation"]
 )
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])

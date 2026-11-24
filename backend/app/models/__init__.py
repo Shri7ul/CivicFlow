@@ -43,6 +43,10 @@ from app.models.enums import (
     ScenarioStatus,
     SimulationStatus,
     TrendDirection,
+    ValidationDatasetStatus,
+    ValidationEvidenceKind,
+    ValidationExperimentType,
+    ValidationStatus,
 )
 from app.models.incident import Incident, IncidentEvidence, IncidentStatusEvent
 from app.models.infrastructure import DependencyEdge, InfrastructureAsset
@@ -62,6 +66,10 @@ from app.models.decision import (
     ResponseResource,
 )
 from app.models.scenario import Scenario, ScenarioResult
+from app.models.validation import (
+    ValidationDataset,
+    ValidationExperiment,
+)
 from app.models.operations import (
     Alert,
     AlertRule,
@@ -149,4 +157,10 @@ __all__ = [
     "ScenarioStatus",
     "SimulationStatus",
     "TrendDirection",
+    "ValidationDataset",
+    "ValidationExperiment",
+    "ValidationDatasetStatus",
+    "ValidationEvidenceKind",
+    "ValidationExperimentType",
+    "ValidationStatus",
 ]

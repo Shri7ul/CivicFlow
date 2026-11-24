@@ -3,9 +3,9 @@
 FastAPI backend for CivicFlow. See the repository root `README.md` for full
 setup, environment, testing, and architecture documentation.
 
-Phase 1 through Phase 7 add:
+Phase 1 through Phase 8 add:
 
-- SQLAlchemy models for 35 application tables and Alembic migrations in
+- SQLAlchemy models for 37 application tables and Alembic migrations in
   `alembic/`.
 - PostGIS-aware spatial columns and GIST indexes.
 - Supabase JWT verification in `app/auth/`.
@@ -26,6 +26,10 @@ Phase 1 through Phase 7 add:
 - Model registry/activation audit, labelled evaluation and calibration metrics,
   provenance-aware idempotent ingestion, freshness monitoring, threshold alerts,
   in-app notifications, and human plan review. Approvals remain non-executing.
+- A reproducible NYC 311 public-data snapshot, leakage-safe rolling-origin risk
+  backtesting against count/recent/weighted/persistence baselines, sensitivity
+  diagnostics, explicitly labelled synthetic correlation/planning evidence,
+  append-only validation experiments, and JSON/Markdown reports.
 - Deterministic development seed data.
 
 ## Commands
@@ -43,6 +47,10 @@ $env:ALEMBIC_DATABASE_URL = "postgresql+psycopg://..."
 # Development seed (non-production)
 .\.venv\Scripts\python.exe -m app.seed
 
+# Reproducible public-data snapshot + experiment records
+.\.venv\Scripts\python.exe scripts\ingest_nyc311.py
+.\.venv\Scripts\python.exe scripts\generate_validation_report.py --latest
+
 # Tests
 .\.venv\Scripts\python.exe -m pytest
 ```
@@ -57,11 +65,14 @@ privacy, and data limitations, and [docs/risk-engine.md](docs/risk-engine.md)
 for the Phase 5 H3 risk model, API, privacy, and interpretation limits,
 [docs/decisions.md](docs/decisions.md) for Phase 6 planning, resources, safety,
 and solver limits, and [docs/operations.md](docs/operations.md) for Phase 7
-governance, evaluation, ingestion, alerts, approvals, and security.
+governance, evaluation, ingestion, alerts, approvals, and security, and
+[docs/validation.md](docs/validation.md) for Phase 8 dataset selection,
+leakage controls, actual metrics, reports, and limitations.
 
 The automated test suite uses isolated SQLite plus offline PostgreSQL SQL
 rendering. Live Supabase migration, PostGIS, RLS/ACL, real ES256 sign-in,
 provisioning, role changes, incident API flows, private Storage upload/signed download, and headless-browser
-map/evidence flows, plus Phase 4 intelligence/relationship and Phase 5
-risk API/browser flows, were also executed with disposable users and then cleaned up;
+map/evidence flows, plus Phase 4 intelligence/relationship, Phase 5 risk,
+Phases 6–7 planning/operations, and Phase 8 validation API/browser flows, were
+also executed with disposable users and then cleaned up;
 see the docs for the exact boundary.

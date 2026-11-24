@@ -20,14 +20,14 @@ Last updated: 2026-11-24
 | Phase 4 — incident intelligence | ACCEPTED + COMMITTED | Migration `0006`–`0008`, intelligence/relationship/impact APIs, live API + browser runs, 122 backend / 51 frontend tests |
 | Phase 5 — urban risk engine | COMPLETE — committed as `640f173` | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
 | Phase 6 — decision intelligence | COMPLETE — committed as `a9d6923` | Migration `0011`, scenarios/actions/resources, bounded simulation, strategy comparison, decision workspace, live API + browser runs |
-| Phase 7 — operational maturity | COMPLETE — awaiting review | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
+| Phase 7 — operational maturity | COMPLETE — committed as `e4a3ab6` | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
+| Phase 8 — real-world validation | COMPLETE — awaiting review | Migration `0016`, NYC 311 snapshot + provenance, rolling-origin risk backtest vs 4 baselines, sensitivity, synthetic correlation/planning evidence, validation dashboard/report CLI, live API + browser runs |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
 intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
-`a9d6923`. Phase 7 is implemented and intentionally left uncommitted for
-review.
+`a9d6923`. Phase 7 is committed as `e4a3ab6`. Phase 8 is committed for review.
 
 ## Phase 4 implementation checklist
 
@@ -581,6 +581,84 @@ Latest recorded results:
   Storage objects, relationships, infrastructure assets, dependency edges, and
   temporary departments were deleted. Remaining counts were zero.
 
+## Phase 8 implementation checklist
+
+### Dataset and reproducibility
+
+- [x] Audited Phases 1–7 before implementing; did not assume prior reports.
+- [x] Selected NYC Open Data / NYC 311 public service requests with a documented
+  source URL and portal-terms boundary; no SPDX license was asserted.
+- [x] Bounded query: Brooklyn bbox `40.680,-73.990` to `40.710,-73.950`,
+  2025-01-01 through 2025-03-31, 12 complaint types.
+- [x] Fetched and normalized **5,102** real records; all selected rows had valid
+  coordinates and supported types.
+- [x] Added schema/period/bbox/coordinate validation, dedup by `unique_key`,
+  canonical sorting, canonical SHA-256, and gzip snapshot I/O.
+- [x] Snapshot load verifies compressed size, schema version, hash, count, typed
+  fields, period, bbox, and duplicate IDs.
+- [x] Wrote snapshot through the existing Phase 7 ingestion architecture with
+  idempotent run, provenance, observed timestamps, and quality snapshot.
+- [x] Registered a `validation_datasets` row with source/run links, hash, path,
+  period, region, schema, portal terms, record count, and status.
+- [x] Added CLI: `backend/scripts/ingest_nyc311.py`.
+
+### Leakage-safe risk validation
+
+- [x] Added `as_of` to `RiskQuery`; operational behavior is unchanged when unset.
+- [x] Ran the actual `RiskEngine` on an isolated in-memory SQLite copy of the
+  snapshot; no operational row was read or mutated.
+- [x] Rolling-origin temporal holdout with 8 folds, 672h history, 168h target,
+  H3-9, top-10.
+- [x] Future records never enter features or configuration decisions.
+- [x] Added baselines A count, B recent count, C weighted count, D persistence.
+- [x] Added precision@k, recall@k, ROC-AUC, and PR-AUC with tie handling.
+- [x] Added sensitivity for window 168h vs 336h, H3 resolutions 7/8/9, and risk
+  band thresholds.
+- [x] Actual empirical result is persisted and explicitly unfavorable:
+  CivicFlow PR-AUC `0.884367` vs strongest baseline `0.907690` (lower by
+  `0.023323`).
+
+### Synthetic and simulated evidence
+
+- [x] Added 8 hand-labelled synthetic duplicate-correlation cases through the
+  real Phase 4 scorer: precision `0.8`, recall `1.0`, F1 `0.888889`.
+- [x] Added a bounded synthetic planning scenario through the real Phase 6
+  comparison: winner `COST_EFFICIENT`, deterministic repeat, UNKNOWN resource
+  blocked from silent availability.
+- [x] Labelled evidence as `SYNTHETIC_FIXTURE` or `SIMULATED_PLANNING`, never
+  as empirical field ground truth.
+- [x] No auto-merge, dispatch, reservation, resource decrement, or incident
+  mutation.
+
+### Persistence, reports, API, and UI
+
+- [x] Added migration `0016_validation_workspace` and staff-only
+  `validation_datasets` / `validation_experiments` with RLS.
+- [x] Experiments are append-only with unique keys; existing results are not
+  overwritten.
+- [x] Added `/api/v1/validation` overview, datasets, experiments, report, and
+  bounded run endpoints. Dataset creation is ADMIN-only.
+- [x] Added `/validation` dashboard with real provenance, baseline table,
+  sensitivity, findings, limitations, synthetic labels, experiment log, and
+  report download.
+- [x] Added `backend/scripts/generate_validation_report.py` for JSON/Markdown
+  reports from persisted rows.
+- [x] Added backend dataset/risk/service/API/migration tests and frontend API
+  tests.
+- [x] No destructive DB operation, live downgrade, or execution path.
+
+### Verification
+
+- [x] Backend: **176 passed** (Phase 8 final).
+- [x] Frontend: **65 tests / 21 files** (Phase 8 final).
+- [x] TypeScript typecheck, ESLint, and production build pass.
+- [x] `scripts/verify.ps1` passes.
+- [x] Live PostgreSQL at `0016_validation_workspace`: 37 application tables,
+  41 RLS policies, 58 FKs, 15 unique constraints, 5 GIST indexes.
+- [x] Live API/DB/RLS: **51 checks passed**; canonical rows remained 1 dataset /
+  3 experiments after cleanup.
+- [x] Headless Chrome `/validation`: 14 checks + screenshot.
+
 ## Known boundaries
 
 - Public self-service `/auth/v1/signup` returned HTTP 429 because the Supabase
@@ -618,9 +696,18 @@ Latest recorded results:
 - Department and authoritative infrastructure data must be loaded out of band.
 - OSM public raster tiles are used for this phase; production tile usage must be
   reviewed separately.
-- Phase 5 is committed as `640f173`; Phase 6 is committed as `a9d6923`. Phase 7
-  is intentionally uncommitted for review. Environment files remain
-  untracked/ignored.
+- Phase 8's target is public 311 complaint activity, not verified hazard impact
+  or municipal outcome ground truth. The bounded bbox/period/type selection and
+  heuristic category/severity mapping limit external validity.
+- The slice is dense (86 H3-9 cells at the first origin); top-k metrics and ROC
+  must not be generalized to sparse data or operational decisions.
+- CivicFlow underperformed the strongest baseline on the reported slice; no
+  superiority claim is made.
+- Duplicate-correlation metrics are hand-labelled synthetic fixtures. Planning
+  reductions and availability are synthetic assumptions.
+- Phase 5 is committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7
+  is committed as `e4a3ab6`. Phase 8 is committed for review without rewriting
+  prior history. Environment files remain untracked/ignored.
 
 ## Suggested next goals
 
