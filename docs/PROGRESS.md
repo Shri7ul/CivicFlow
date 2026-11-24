@@ -890,7 +890,7 @@ Latest recorded results (Phase 10):
 
 ### Verification and honest limitations
 
-- [x] Backend: **231 passed**; frontend: **86 tests / 26 files**; typecheck,
+- [x] Backend: **232 passed**; frontend: **86 tests / 26 files**; typecheck,
   ESLint and production build passed.
 - [x] Live migrations through `0022_snapshot_provenance`; real data acquisition
   and independent recomputation performed.

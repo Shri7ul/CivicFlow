@@ -383,9 +383,10 @@ metrics.
 
 ## Verification
 
-- Backend: 231 tests passed, including migration roundtrip, Phase 11 API,
+- Backend: 232 tests passed, including migration roundtrip, Phase 11 API,
   acquisition, provenance, ground-truth separation, synthetic exclusion,
-  null correlation metrics, readiness and security.
+  null correlation metrics, traversal/oversized-input rejection, SQL-literal
+  safety and authorization.
 - Frontend: 86 tests passed across 26 files, including Phase 11 API, summary,
   loading/error/empty, provenance and metric presentation.
 - TypeScript typecheck, ESLint and Next.js production build passed.

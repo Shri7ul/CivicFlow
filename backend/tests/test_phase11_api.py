@@ -385,6 +385,60 @@ def test_ground_truth_rejects_spoofed_fields(db_session: Session) -> None:
     assert response.status_code == 422
 
 
+def test_phase11_rejects_traversal_oversize_and_keeps_sql_literal(
+    db_session: Session,
+) -> None:
+    admin = _profile(db_session, Role.ADMIN, "Admin")
+    worker = _profile(db_session, Role.WORKER, "Worker")
+    client = _client(db_session)
+
+    traversal = client.post(
+        "/api/v1/governance/evidence/acquire",
+        json={"source_key": "../../etc/passwd"},
+        headers=_auth(admin),
+    )
+    assert traversal.status_code == 422
+    bad_id = client.get(
+        "/api/v1/governance/evidence/snapshots/..%2F..%2Fetc%2Fpasswd",
+        headers=_auth(worker),
+    )
+    assert bad_id.status_code in {404, 422}
+
+    oversized = _gt_payload("SYNTH-OVERSIZE")
+    oversized["description"] = "x" * 4001
+    response = client.post(
+        "/api/v1/governance/evidence/ground-truth",
+        json=oversized,
+        headers=_auth(worker),
+    )
+    assert response.status_code == 422
+
+    literal = _gt_payload("SYNTH-SQL-LITERAL")
+    literal["description"] = "x'); DROP TABLE ground_truth_records; -- synthetic literal"
+    created = client.post(
+        "/api/v1/governance/evidence/ground-truth",
+        json=literal,
+        headers=_auth(worker),
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["description"] == literal["description"]
+    listed = client.get(
+        "/api/v1/governance/evidence/ground-truth",
+        headers=_auth(worker),
+    )
+    assert listed.status_code == 200
+    assert any(
+        item["description"] == literal["description"]
+        for item in listed.json()["items"]
+    )
+    record = db_session.scalar(
+        select(GroundTruthRecord).where(
+            GroundTruthRecord.description == literal["description"]
+        )
+    )
+    assert record is not None
+
+
 def test_correlation_universe_immutable_and_provenance_checked(
     db_session: Session,
 ) -> None:
