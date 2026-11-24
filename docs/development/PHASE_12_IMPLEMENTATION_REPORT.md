@@ -217,7 +217,15 @@ offline migration tests are the evidence for it.
 
 ## Git Commit / Push Status
 
-_To be filled after commit: commit hash, branch and push verification._
+- Phase 12 commit: `7d402ce95c26ddb063dd9f50083eaa0fbb2e8cdb`
+  (`feat(civicflow): prepare Dhaka controlled pilot`), 44 files.
+- Branch: `main`. No force-push, no history rewrite, no secrets committed.
+- Push: succeeded — `a3babc9..7d402ce  main -> main` to
+  `https://github.com/Shri7ul/CivicFlow.git`.
+- Verified local HEAD equals remote `origin/main` HEAD; working tree clean after
+  commit.
+- This report's final Git-state section was recorded in a follow-up docs-only
+  commit after the implementation commit was pushed.
 
 ## Remaining Blockers
 
