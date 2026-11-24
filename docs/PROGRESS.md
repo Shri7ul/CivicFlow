@@ -21,13 +21,15 @@ Last updated: 2026-11-24
 | Phase 5 — urban risk engine | COMPLETE — committed as `640f173` | Migrations `0009`/`0010`, H3 factor engine + APIs, risk map, live API + browser runs, full verification |
 | Phase 6 — decision intelligence | COMPLETE — committed as `a9d6923` | Migration `0011`, scenarios/actions/resources, bounded simulation, strategy comparison, decision workspace, live API + browser runs |
 | Phase 7 — operational maturity | COMPLETE — committed as `e4a3ab6` | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
-| Phase 8 — real-world validation | COMPLETE — awaiting review | Migration `0016`, NYC 311 snapshot + provenance, rolling-origin risk backtest vs 4 baselines, sensitivity, synthetic correlation/planning evidence, validation dashboard/report CLI, live API + browser runs |
+| Phase 8 — real-world validation | COMPLETE — committed as `62c2e02` | Migration `0016`, NYC 311 snapshot + provenance, rolling-origin risk backtest vs 4 baselines, sensitivity, synthetic correlation/planning evidence, validation dashboard/report CLI, live API + browser runs |
+| Phase 9 — model diagnosis and external validation | COMPLETE — awaiting review | Migration `0017`, 4 multi-region snapshots, factor audit, 19-variant ablation, robustness suite, bootstrap/sign tests, pre-registered candidate evaluated on 3 holdouts and not activated, research report + `/validation` extension, live API + browser runs |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
 intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
-`a9d6923`. Phase 7 is committed as `e4a3ab6`. Phase 8 is committed for review.
+`a9d6923`. Phase 7 is committed as `e4a3ab6`. Phase 8 is committed as `62c2e02`.
+Phase 9 is committed for review without rewriting prior history.
 
 ## Phase 4 implementation checklist
 
@@ -659,6 +661,85 @@ Latest recorded results:
   3 experiments after cleanup.
 - [x] Headless Chrome `/validation`: 14 checks + screenshot.
 
+## Phase 9 implementation checklist
+
+### Diagnostic audit and dataset expansion
+
+- [x] Audited Phase 8 results instead of assuming them; confirmed the frozen
+  `phase9-risk-diagnosis-v1` protocol was written before any external data was
+  fetched.
+- [x] Added three public NYC 311 snapshots with documented query metadata:
+  Brooklyn 2025 Q2 (3,715), Manhattan 2025 Q2 (4,670), Staten Island 2025 Q1
+  (4,694). The existing Brooklyn 2025 Q1 slice remains the development dataset.
+- [x] Every snapshot carries a canonical SHA-256, gzip byte limit, schema
+  version, period, bbox, portal terms, and Phase 7 ingestion run link; the CLI
+  now supports `--dataset` and `--all`.
+- [x] Recorded factor availability, zero share, target association, and pairwise
+  redundancy per dataset; unavailable infrastructure/dependency factors are
+  explicitly excluded from interpretation.
+
+### Leakage-safe ablation, robustness, and statistics
+
+- [x] Ran 19 fixed ablation variants (full, 9 leave-one-out, 9 single-factor) on
+  identical rolling origins with renormalized weights.
+- [x] Pre-registered selection: highest mean paired PR-AUC delta on the
+  development dataset only; external datasets are never used for selection.
+- [x] Robustness suite: H3 7/8/9, windows 72/168/336h, 50%/75% record thinning,
+  density strata, threshold bands, and missingness.
+- [x] Added percentile bootstrap intervals (2,000 resamples, seed `20261124`)
+  and exact two-sided sign tests; the report labels intervals as descriptive
+  because rolling origins overlap.
+- [x] Added `backend/app/validation/{diagnostics,ablations,robustness,stats}.py`
+  and persistence helpers with protocol/variant keys; no activation path exists.
+
+### Honest model decision
+
+- [x] CivicFlow PR-AUC `0.884367` / `0.854554` / `0.869954` / `0.517661` vs best
+  baselines `0.907690` / `0.901136` / `0.927668` / `0.541535`: above the
+  strongest baseline on **0 of 4** datasets.
+- [x] `drop_trend` was selected on development (`+0.006311`, interval includes
+  zero) and gained on only 1 of 3 external holdouts with an interval above zero
+  (`nyc311-brooklyn-2025q2`, `+0.007970`, `[0.001712, 0.015833]`).
+- [x] Decision recorded as mixed evidence: the registered risk-v1 model is
+  **retained unchanged** and the candidate is persisted as `NOT_ACTIVATED`.
+- [x] No factor weight, threshold, resolution, or model version was changed by
+  the protocol; no predictive or causal claim is made.
+
+### Report, API, and dashboard
+
+- [x] Added migration `0017_phase9_diagnostics` (`protocol_key`, `variant_key`,
+  protocol index, five research experiment types) without touching prior
+  migrations.
+- [x] Added `GET /api/v1/validation/research`, `GET .../research/report`, and
+  ADMIN-only `POST .../research`; reads are staff-only and bounded to the newest
+  200 protocol rows.
+- [x] Hardened run inputs: at most 8 dataset keys, each at most 200 characters,
+  deduplicated before lookup; unknown keys return `422 dataset_not_found`.
+- [x] Added `backend/scripts/run_phase9_research.py` and
+  `backend/scripts/generate_phase9_report.py` (strict mode validates all 18
+  report sections).
+- [x] Extended `/validation` with multi-region results, diagnostics, ablation
+  ranking, robustness, statistics, candidate decision, evidence policy, and
+  report download. Persisted API data only; empty states stay explicit.
+- [x] Added backend stats/analysis/API/dataset/report tests and frontend
+  API-client and component tests.
+
+### Verification
+
+- [x] Backend: **204 passed** (Phase 9 final).
+- [x] Frontend: **72 tests / 22 files** (Phase 9 final).
+- [x] TypeScript typecheck, ESLint, and production build pass.
+- [x] `scripts/verify.ps1` passes.
+- [x] Live PostgreSQL at `0017_phase9_diagnostics`: both columns and the
+  protocol index exist, and the experiment-type constraint accepts the five
+  Phase 9 types.
+- [x] Live API/DB/RLS: **35 checks passed**, including staff reads, ADMIN-only
+  run, Citizen 403, anonymous 401, bounded-input 422s, secret-free report body,
+  and cleanup to zero disposable users.
+- [x] Headless Chrome `/validation`: Phase 9 cards, executive summary, dataset
+  selector, band counts, and report download (`154,222` bytes, 23 keys) verified
+  with no console errors.
+
 ## Known boundaries
 
 - Public self-service `/auth/v1/signup` returned HTTP 429 because the Supabase
@@ -706,8 +787,14 @@ Latest recorded results:
 - Duplicate-correlation metrics are hand-labelled synthetic fixtures. Planning
   reductions and availability are synthetic assumptions.
 - Phase 5 is committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7
-  is committed as `e4a3ab6`. Phase 8 is committed for review without rewriting
-  prior history. Environment files remain untracked/ignored.
+  is committed as `e4a3ab6`; Phase 8 is committed as `62c2e02`. Phase 9 is
+  committed for review without rewriting prior history. Environment files remain
+  untracked/ignored.
+- Phase 9 adds no new authoritative label source: complaint activity remains a
+  proxy, and the external slices test transfer only across three dense NYC
+  geographies plus one sparse Staten Island slice.
+- Bootstrap intervals describe variability across overlapping origins; they are
+  not population confidence intervals and do not make folds independent.
 
 ## Suggested next goals
 

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { Phase9Research } from "@/components/validation/phase9-research";
 import {
+  getPhase9Report,
+  getPhase9Research,
   getValidationExperiment,
   getValidationOverview,
   getValidationReport,
@@ -12,6 +15,8 @@ import {
   runRiskValidation,
 } from "@/lib/api/validation";
 import type {
+  Phase9Report,
+  Phase9Summary,
   ValidationDataset,
   ValidationEvidenceKind,
   ValidationExperiment,
@@ -223,12 +228,25 @@ export function ValidationDashboard() {
     useState<ValidationExperimentDetail | null>(null);
   const [decisionDetail, setDecisionDetail] =
     useState<ValidationExperimentDetail | null>(null);
+  const [research, setResearch] = useState<Phase9Summary | null>(null);
+  const [researchReport, setResearchReport] = useState<Phase9Report | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const next = await getValidationOverview(apiRequest);
+    const [researchResult, reportResult] = await Promise.all([
+      getPhase9Research(apiRequest).catch((researchFailure: unknown) => {
+        setResearchError(errorMessage(researchFailure));
+        return null;
+      }),
+      getPhase9Report(apiRequest).catch(() => null),
+    ]);
+    setResearch(researchResult);
+    setResearchReport(reportResult);
+    if (researchResult) setResearchError(null);
     const risk = next.experiments.find(
       (item) =>
         item.experiment_type === "RISK_BACKTEST" && item.status === "COMPLETED",
@@ -306,6 +324,27 @@ export function ValidationDashboard() {
     }
   }
 
+  async function downloadPhase9Report() {
+    setBusy("phase9-report");
+    setError(null);
+    try {
+      const payload = researchReport ?? (await getPhase9Report(apiRequest));
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = payload.protocol_key + "-report.json";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (reportError) {
+      setError(errorMessage(reportError));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (loading) {
     return (
       <main className="mx-auto w-full max-w-7xl px-5 py-12 sm:px-8">
@@ -349,7 +388,7 @@ export function ValidationDashboard() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-            Phase 8 · real-world validation
+            Phases 8–9 · validation &amp; model research
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
             Validation &amp; urban data
@@ -357,8 +396,9 @@ export function ValidationDashboard() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
             Persisted experiments only. Empirical service-request activity is
             labelled separately from synthetic fixtures and simulated planning.
-            This workspace never dispatches units, reserves resources, or mutates
-            an incident.
+            Phase 9 diagnosis and external holdout results are read from stored
+            protocol rows; nothing here dispatches units, reserves resources, or
+            mutates an incident.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -523,6 +563,15 @@ export function ValidationDashboard() {
           </p>
         )}
       </section>
+
+      <Phase9Research
+        summary={research}
+        report={researchReport}
+        loading={false}
+        error={researchError}
+        onDownloadReport={() => void downloadPhase9Report()}
+        busy={busy === "phase9-report"}
+      />
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">

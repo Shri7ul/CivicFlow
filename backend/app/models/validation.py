@@ -104,9 +104,16 @@ class ValidationExperiment(UUIDPrimaryKeyMixin, Base):
         Index("ix_validation_experiments_dataset_created", "dataset_id", "created_at"),
         Index("ix_validation_experiments_type_status", "experiment_type", "status"),
         Index("ix_validation_experiments_evidence", "evidence_kind"),
+        Index(
+            "ix_validation_experiments_protocol",
+            "protocol_key",
+            "variant_key",
+        ),
     )
 
     experiment_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    protocol_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    variant_key: Mapped[str | None] = mapped_column(String(80), nullable=True)
     name: Mapped[str] = mapped_column(String(240), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     dataset_id: Mapped[uuid.UUID | None] = mapped_column(

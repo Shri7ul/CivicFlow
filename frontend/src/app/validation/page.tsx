@@ -8,7 +8,7 @@ import { ValidationDashboard } from "@/components/validation/validation-dashboar
 export const metadata: Metadata = {
   title: "Validation",
   description:
-    "Persisted real-world validation experiments, baseline comparisons, dataset provenance, and explicit limitations.",
+    "Persisted real-world validation experiments, Phase 9 diagnosis and external holdout results, dataset provenance, and explicit limitations.",
 };
 
 export default function ValidationPage() {

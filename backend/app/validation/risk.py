@@ -292,6 +292,7 @@ def _sensitivity(
     config: RiskConfig,
     session: Session,
     settings: Settings,
+    bbox: tuple[float, float, float, float],
 ) -> dict:
     del records
     def window_scores(window_hours: int, resolution: int) -> dict[str, float]:
@@ -299,7 +300,7 @@ def _sensitivity(
             RiskQuery(
                 resolution=resolution,
                 window_hours=window_hours,
-                bbox=NYC311_BBOX,
+                bbox=bbox,
                 limit=config.max_cells,
                 as_of=origin,
             )
@@ -371,6 +372,9 @@ def run_risk_backtest(
     settings: Settings,
     config: RiskConfig,
     dataset_key: str,
+    bbox: tuple[float, float, float, float] = NYC311_BBOX,
+    include_sensitivity: bool = True,
+    include_cell_data: bool = False,
 ) -> dict:
     if not records:
         raise ValueError("No validated records are available.")
@@ -410,7 +414,7 @@ def run_risk_backtest(
                 RiskQuery(
                     resolution=settings.validation_resolution,
                     window_hours=settings.validation_target_hours,
-                    bbox=NYC311_BBOX,
+                    bbox=bbox,
                     limit=config.max_cells,
                     as_of=origin,
                 )
@@ -462,8 +466,23 @@ def run_risk_backtest(
                 )
                 for method, scores in methods.items()
             }
-            folds.append(
-                {
+            cell_data = None
+            if include_cell_data:
+                history_counts = _counting_cells(
+                    history, settings.validation_resolution
+                )
+                cell_data = {
+                    cell: {
+                        "label": labels[cell],
+                        "history_count": len(history_counts.get(cell, [])),
+                        "scores": {
+                            method: round(scores.get(cell, 0.0), 6)
+                            for method, scores in methods.items()
+                        },
+                    }
+                    for cell in sorted(labels)
+                }
+            fold_payload = {
                     "origin": origin.isoformat(),
                     "target_start": origin.isoformat(),
                     "target_end": (origin + target).isoformat(),
@@ -476,7 +495,9 @@ def run_risk_backtest(
                     ),
                     "metrics": fold_metrics,
                 }
-            )
+            if cell_data is not None:
+                fold_payload["cell_data"] = cell_data
+            folds.append(fold_payload)
             origin += target
         sensitivity_origin = (
             _parse(folds[0]["origin"]) if folds else None
@@ -488,8 +509,9 @@ def run_risk_backtest(
                 config=config,
                 session=session,
                 settings=settings,
+                bbox=bbox,
             )
-            if sensitivity_origin is not None
+            if include_sensitivity and sensitivity_origin is not None
             else None
         )
     finally:
@@ -541,6 +563,8 @@ def run_risk_backtest(
         "sensitivity": sensitivity,
         "density": density,
         "resolution": settings.validation_resolution,
+        "config_hash": config.config_hash,
+        "risk_config": config.as_dict(),
         "dataset_start": start.isoformat(),
         "dataset_end": end.isoformat(),
         "origin_count": len(folds),

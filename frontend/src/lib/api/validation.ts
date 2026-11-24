@@ -1,5 +1,7 @@
 import type { ApiRequester } from "@/lib/api/incidents";
 import type {
+  Phase9Report,
+  Phase9Summary,
   ValidationExperimentDetail,
   ValidationOverview,
   ValidationReport,
@@ -51,6 +53,34 @@ export function runCorrelationValidation(
     "/api/v1/validation/experiments/correlation",
     { method: "POST", headers: JSON_HEADERS, timeoutMs: 30000 },
   );
+}
+
+export function getPhase9Research(
+  request: ApiRequester,
+  options: { signal?: AbortSignal } = {},
+): Promise<Phase9Summary> {
+  return request<Phase9Summary>("/api/v1/validation/research", {
+    signal: options.signal,
+  });
+}
+
+export function getPhase9Report(
+  request: ApiRequester,
+  options: { signal?: AbortSignal } = {},
+): Promise<Phase9Report> {
+  return request<Phase9Report>("/api/v1/validation/research/report", {
+    signal: options.signal,
+  });
+}
+
+export function runPhase9Research(
+  request: ApiRequester,
+): Promise<Phase9Summary> {
+  return request<Phase9Summary>("/api/v1/validation/research", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    timeoutMs: 600000,
+  });
 }
 
 export function runDecisionValidation(

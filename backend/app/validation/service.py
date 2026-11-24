@@ -23,12 +23,12 @@ from app.models import (
     ValidationStatus,
 )
 from app.validation.correlation import run_correlation_validation
-from app.validation.dataset import load_snapshot, normalize_nyc311_record
+from app.validation.dataset import NYC311_BBOX, load_snapshot, normalize_nyc311_record
 from app.validation.decision import run_decision_validation
 from app.validation.risk import run_risk_backtest
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "validation"
-APP_VERSION = "0.8.0"
+APP_VERSION = "0.9.0"
 
 
 class ValidationError(ValueError):
@@ -138,7 +138,10 @@ def dataset_records(session: Session, dataset: ValidationDataset) -> tuple[list[
                 "Snapshot file record count does not match the registry.",
                 code="dataset_count_mismatch",
             )
-        return records, payload.get("metadata", {})
+        metadata = dict(payload.get("metadata", {}))
+        if payload.get("bbox"):
+            metadata["bbox"] = payload["bbox"]
+        return records, metadata
     if dataset.source_id is None:
         raise ValidationError(
             "Dataset has neither a usable snapshot nor an ingestion source.",
@@ -192,9 +195,13 @@ def _new_experiment(
     period_start: datetime | None = None,
     period_end: datetime | None = None,
     record_count: int = 0,
+    protocol_key: str | None = None,
+    variant_key: str | None = None,
 ) -> ValidationExperiment:
     experiment = ValidationExperiment(
         experiment_key=f"{experiment_type.value.lower()}-{uuid.uuid4()}",
+        protocol_key=protocol_key,
+        variant_key=variant_key,
         name=name,
         description=None,
         dataset_id=dataset.id if dataset else None,
@@ -265,6 +272,23 @@ def run_risk_experiment(
 ) -> ValidationExperiment:
     config = resolve_risk_config(session, settings)
     records, metadata = dataset_records(session, dataset)
+    bbox_value = (
+        metadata.get("bbox")
+        or (metadata.get("query") or {}).get("bbox")
+        or dataset.dataset_metadata.get("bbox")
+        or list(NYC311_BBOX)
+    )
+    try:
+        bbox = tuple(float(value) for value in bbox_value)
+    except (TypeError, ValueError) as error:
+        raise ValidationError(
+            "Dataset bbox metadata is invalid.", code="dataset_bbox_invalid"
+        ) from error
+    if len(bbox) != 4:
+        raise ValidationError(
+            "Dataset bbox metadata must contain four coordinates.",
+            code="dataset_bbox_invalid",
+        )
     if len(records) > settings.validation_max_records:
         raise ValidationError(
             "Dataset exceeds the configured validation record cap.",
@@ -293,6 +317,7 @@ def run_risk_experiment(
             settings=settings,
             config=config,
             dataset_key=dataset.dataset_key,
+            bbox=bbox,
         )
         methods = result.get("methods", {})
         risk = methods.get("civicflow_risk", {})
@@ -353,6 +378,7 @@ def run_risk_experiment(
             "dataset_key": dataset.dataset_key,
             "dataset_snapshot_sha256": dataset.snapshot_sha256,
             "dataset_metadata": metadata,
+            "dataset_bbox": list(bbox),
             "risk_config": config.as_dict(),
             "risk_config_hash": config.config_hash,
             "settings": {

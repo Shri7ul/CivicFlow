@@ -29,6 +29,8 @@ from app.validation.service import (
     run_decision_experiment,
     run_risk_experiment,
 )
+from app.validation.research import phase9_summary, run_phase9_research
+from app.validation.research_report import build_research_report
 
 router = APIRouter()
 
@@ -84,6 +86,8 @@ def _serialize_experiment(experiment: ValidationExperiment, *, detail: bool = Fa
     payload = {
         "id": experiment.id,
         "experiment_key": experiment.experiment_key,
+        "protocol_key": experiment.protocol_key,
+        "variant_key": experiment.variant_key,
         "name": experiment.name,
         "experiment_type": experiment.experiment_type.value,
         "evidence_kind": experiment.evidence_kind.value,
@@ -293,3 +297,46 @@ def run_decision(
         session, settings=settings, actor_id=user.profile.id
     )
     return _serialize_experiment(experiment, detail=True)
+
+
+@router.get("/research")
+def get_research(
+    user: Annotated[AuthenticatedUser, Depends(require_worker)],
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    del user
+    return phase9_summary(session)
+
+
+@router.get("/research/report")
+def get_research_report(
+    user: Annotated[AuthenticatedUser, Depends(require_worker)],
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    del user
+    return build_research_report(session)
+
+
+@router.post("/research")
+def run_research(
+    user: Annotated[AuthenticatedUser, Depends(require_admin)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    session: Annotated[Session, Depends(get_db_session)],
+    datasets: Annotated[list[str], Query()] = [],
+) -> dict:
+    """Run the bounded Phase 9 protocol.
+
+    ADMIN-only: the run executes a fixed, bounded number of backtests over each
+    registered snapshot, persists append-only experiment rows, and never
+    activates a model. The CLI runner is the canonical interface.
+    """
+    try:
+        result = run_phase9_research(
+            session,
+            settings=settings,
+            actor_id=user.profile.id,
+            dataset_keys=datasets or None,
+        )
+    except ValidationError as error:
+        raise AppError(str(error), status_code=422, code=error.code) from error
+    return result

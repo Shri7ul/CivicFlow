@@ -61,6 +61,8 @@ class DatasetResponse(BaseModel):
 class ExperimentSummary(BaseModel):
     id: uuid.UUID
     experiment_key: str
+    protocol_key: str | None
+    variant_key: str | None
     name: str
     experiment_type: str
     evidence_kind: str

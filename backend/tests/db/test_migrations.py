@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0016_validation_workspace"
+    assert version == "0017_phase9_diagnostics"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -123,6 +123,7 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0014_model_version_uniqueness.py",
         "0015_ingested_record_provenance.py",
         "0016_validation_workspace.py",
+        "0017_phase9_diagnostics.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -186,3 +187,9 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "PHASE8_TABLES" in validation
     assert "is_worker_or_admin()" in validation
     assert "evidence_kind" in validation
+    diagnostics = versions[16].read_text(encoding="utf-8")
+    assert "protocol_key" in diagnostics
+    assert "variant_key" in diagnostics
+    assert "ix_validation_experiments_protocol" in diagnostics
+    assert "RISK_DIAGNOSTIC" in diagnostics
+    assert "0016_validation_workspace" in diagnostics

@@ -14,7 +14,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestLoggingMiddleware
 
-APP_VERSION = "0.8.0"
+APP_VERSION = "0.9.0"
 logger = get_logger("app")
 
 

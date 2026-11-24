@@ -2,11 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ApiRequester } from "@/lib/api/incidents";
 import {
+  getPhase9Report,
+  getPhase9Research,
   getValidationExperiment,
   getValidationOverview,
   getValidationReport,
   runCorrelationValidation,
   runDecisionValidation,
+  runPhase9Research,
   runRiskValidation,
 } from "@/lib/api/validation";
 
@@ -70,5 +73,33 @@ describe("validation API helpers", () => {
         timeoutMs: 30000,
       },
     );
+  });
+
+  it("reads Phase 9 research summaries and reports from persisted records", async () => {
+    const request = vi.fn(async (path: string) => ({ path })) as unknown as ApiRequester;
+
+    await getPhase9Research(request);
+    await getPhase9Report(request);
+
+    expect(request).toHaveBeenNthCalledWith(1, "/api/v1/validation/research", {
+      signal: undefined,
+    });
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/validation/research/report",
+      { signal: undefined },
+    );
+  });
+
+  it("runs the Phase 9 protocol as an admin-only bounded request", async () => {
+    const request = vi.fn(async () => ({ dataset_count: 0 })) as unknown as ApiRequester;
+
+    await runPhase9Research(request);
+
+    expect(request).toHaveBeenCalledWith("/api/v1/validation/research", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      timeoutMs: 600000,
+    });
   });
 });

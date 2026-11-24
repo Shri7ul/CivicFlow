@@ -11,8 +11,9 @@ architecture + authentication/authorization), **Phase 1.6** (security hardening)
 incident intelligence), **Phase 5** (H3 urban risk engine), **Phase 6**
 (decision intelligence and scenario planning), **Phase 7** (operational
 maturity, model governance, evaluation, data quality, alerts, and approvals),
-and **Phase 8** (reproducible public-data validation, baseline backtesting, and
-explicit experiment evidence).
+**Phase 8** (reproducible public-data validation, baseline backtesting, and
+explicit experiment evidence), and **Phase 9** (model diagnosis, factor
+ablation, multi-region external validation, and research reporting).
 
 Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
 ingestion, leakage-safe rolling-origin risk backtesting against four baselines,
@@ -20,6 +21,17 @@ sensitivity diagnostics, explicitly labelled synthetic correlation/planning
 evidence, append-only experiment records, a `/validation` dashboard, and
 reproducible reports. The empirical result is reported honestly: CivicFlow did
 not outperform the strongest baseline on this slice.
+
+Phase 9 diagnoses that result and tests it further: four public NYC 311
+snapshots across Brooklyn, Manhattan, and Staten Island, a pre-registered
+leave-one-out/single-factor ablation (19 variants), robustness checks over H3
+resolution, target window, record thinning, density strata, thresholds, and
+missingness, bootstrap intervals and exact sign tests, and an 18-section
+research report. The candidate variant was evaluated on external holdouts and
+**not activated**: mixed evidence retained the registered model unchanged. The
+dashboard extension reads persisted records only and labels every result as
+empirical observational complaint activity, synthetic fixture, or simulated
+planning.
 
 Phase 7 adds model governance and labelled evaluation, provenance-aware
 ingestion and freshness monitoring, staff threshold alerts with in-app
@@ -130,6 +142,41 @@ current status, verification evidence, and known boundaries.
 - **Actual result:** CivicFlow mean PR-AUC `0.884367` vs strongest baseline
   (`baseline_recent`) `0.907690`; the persisted finding says it did not exceed
   the baseline. See [backend/docs/validation.md](backend/docs/validation.md).
+
+### Phase 9 — model diagnosis and external validation
+
+- Four pinned public NYC 311 snapshots with documented provenance: Brooklyn
+  2025 Q1 (development, 5,102 records), Brooklyn 2025 Q2 (3,715), Manhattan 2025
+  Q2 (4,670), Staten Island 2025 Q1 (4,694, the only sparse geography).
+- Pre-registered protocol `phase9-risk-diagnosis-v1`: no factor weight, threshold,
+  resolution, or model version was changed. Candidate selection is restricted to
+  the development dataset; external snapshots are labelled holdouts.
+- Factor diagnostic audit: availability, zero share, target association, and
+  pairwise redundancy for all nine factors. Infrastructure and dependency
+  metadata are absent from the isolated validation universe, so their weight is
+  renormalized and that limitation is recorded explicitly.
+- Ablation study: 19 variants (full, 9 leave-one-out, 9 single-factor) on identical
+  folds with renormalized weights. `only_density` is the strongest single-factor
+  variant; `drop_trend` was selected on development.
+- Robustness suite: H3 resolutions 7/8/9, 72/168/336h target windows, 50%/75%
+  record thinning, density strata, threshold bands, and missingness.
+- Statistics: percentile bootstrap intervals (2,000 resamples, seed `20261124`)
+  and exact two-sided sign tests over folds. Intervals are descriptive because
+  rolling origins overlap.
+- **Actual result:** CivicFlow PR-AUC `0.884367` / `0.854554` / `0.869954` /
+  `0.517661` against best baselines `0.907690` / `0.901136` / `0.927668` /
+  `0.541535` — above the strongest baseline on **0 of 4** datasets. The selected
+  `drop_trend` candidate gained on 1 of 3 external holdouts with an interval above
+  zero, so the registered model is **retained unchanged** (`NOT_ACTIVATED`).
+- Migration `0017_phase9_diagnostics` adds `protocol_key`, `variant_key`, and a
+  protocol index to the append-only experiment table, plus five research
+  experiment types.
+- New `/validation` research section: multi-region table, diagnostics, ablation
+  ranking, sensitivity, bootstrap intervals, candidate decision, evidence policy,
+  limitations, and JSON report download — persisted data only, no fake stats.
+- CLIs: `backend/scripts/run_phase9_research.py` and
+  `backend/scripts/generate_phase9_report.py`. See
+  [backend/docs/phase9.md](backend/docs/phase9.md).
 
 ### Phase 7 — operational maturity and intelligence validation
 
@@ -324,7 +371,7 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0016_validation_workspace`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
+`0017_phase9_diagnostics`, PostGIS 3.3.7 is installed, the RLS/ACL matrix has
 been exercised transactionally and with isolated real Auth users, and private
 Storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
@@ -336,7 +383,9 @@ Storage upload/signed-download was verified end to end. See
 contract, and `backend/docs/operations.md` for Phase 7 governance, evaluation,
 ingestion, alerts, approvals, and security, and
 `backend/docs/validation.md` for Phase 8 dataset selection, leakage controls,
-actual metrics, synthetic evidence, reports, and limitations.
+actual metrics, synthetic evidence, reports, and limitations, and
+`backend/docs/phase9.md` for the Phase 9 protocol, ablation, robustness,
+external holdout results, statistics, and model decision.
 
 ## Quick start (Windows PowerShell)
 
@@ -647,7 +696,7 @@ The configured Supabase project was validated on **2026-11-23**:
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0016_validation_workspace`; 37 application tables, 41
+- Alembic is at `0017_phase9_diagnostics`; 37 application tables, 41
   application RLS policies, 58 foreign keys, 15 unique constraints, and 5 GIST
   indexes exist (plus `alembic_version` and PostGIS
   `spatial_ref_sys`). The private `incident-evidence` bucket exists with
@@ -681,6 +730,19 @@ The configured Supabase project was validated on **2026-11-23**:
   denial. A metadata-only dataset could not fabricate records. Headless Chrome
   rendered `/validation` with real provenance, sensitivity, limitation, and
   synthetic-evidence sections and captured a screenshot.
+- Phase 9 live validation (2026-11-24) confirmed migration
+  `0017_phase9_diagnostics`, the `protocol_key`/`variant_key` columns, the
+  protocol index, and all five research experiment types, then exercised 35
+  API/DB/RLS checks: staff-only research reads, ADMIN-only runs, Citizen `403`,
+  anonymous `401`, bounded-input `422`s (unknown, oversized, and too many
+  dataset keys), secret-free report bodies, and cleanup to zero disposable
+  users. Headless Chrome `/validation` rendered the Phase 9 cards, executive
+  summary, multi-region table, dataset selector, band counts, and report
+  download (154,222 bytes, 23 top-level keys) with no console errors.
+- Phase 9 persisted results are deliberately unfavorable: CivicFlow was above
+  the strongest baseline on **0 of 4** datasets, and the pre-registered
+  `drop_trend` candidate is recorded as `NOT_ACTIVATED` because external
+  holdout evidence was mixed. No model configuration changed.
 - Phase 7 live headless-Chrome validation rendered `/operations` with a real
   source, alert, governance, risk, approval, and safety state, and captured a
   screenshot.
@@ -847,9 +909,15 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Rolling-origin risk backtest vs four baselines | Complete; empirical result honestly unfavorable |
 | Synthetic correlation and planning evidence | Complete; explicitly labelled and separately reported |
 | Append-only validation experiments and reports | Complete; API, CLI, and `/validation` dashboard verified |
+| Multi-region / multi-period NYC 311 snapshots with provenance | Complete; 4 snapshots, hashes and query metadata persisted |
+| Factor diagnostics and 19-variant ablation | Complete; persisted, renormalized, paired against the full model |
+| Robustness, bootstrap intervals, and sign tests | Complete; descriptive statistics, intervals reported as such |
+| Candidate selection and model decision | Complete; `drop_trend` evaluated on 3 holdouts, retained unchanged, `NOT_ACTIVATED` |
+| Phase 9 research report and dashboard extension | Complete; 18-section report and persisted-data-only UI |
 | Authoritative municipal hazard outcomes / field labels | Not included; 311 activity is not verified impact ground truth |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
 committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7 is committed
-as `e4a3ab6`. Phase 8 is committed for review.
+as `e4a3ab6`; Phase 8 is committed as `62c2e02`. Phase 9 is committed for review
+without rewriting Phase 1–8 history.
