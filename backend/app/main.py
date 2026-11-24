@@ -13,8 +13,8 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestLoggingMiddleware
+from app.version import APP_VERSION
 
-APP_VERSION = "0.10.0"
 logger = get_logger("app")
 
 

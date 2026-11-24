@@ -41,6 +41,11 @@ class InfrastructureAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_infrastructure_assets_name", "name"),
         Index("ix_infrastructure_assets_asset_type", "asset_type"),
         Index("ix_infrastructure_assets_is_active", "is_active"),
+        UniqueConstraint(
+            "source_id", "external_id", name="uq_infrastructure_assets_source_external"
+        ),
+        Index("ix_infrastructure_assets_source", "source_id"),
+        Index("ix_infrastructure_assets_snapshot", "snapshot_id"),
         Index(
             "ix_infrastructure_assets_location_gist",
             "location",
@@ -73,6 +78,17 @@ class InfrastructureAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=dict,
         server_default=text("'{}'"),
     )
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("infrastructure_sources.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    snapshot_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("evidence_snapshots.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    external_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     outgoing_dependencies: Mapped[list["DependencyEdge"]] = relationship(
         back_populates="source_asset",

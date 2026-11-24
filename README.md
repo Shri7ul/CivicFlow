@@ -17,7 +17,9 @@ ablation, multi-region external validation, and research reporting), and
 **Phase 10** (controlled pilot governance, human risk review, assessment
 traceability, reviewer-verified correlation evaluation, infrastructure
 metadata readiness, simulation constraint auditing, and a gated readiness
-scorecard).
+scorecard), and **Phase 11** (hashed real-data acquisition, real NYC bridge
+infrastructure, human ground-truth review, correlation reference universes,
+and fresh external validation with an evidence workspace).
 
 Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
 ingestion, leakage-safe rolling-origin risk backtesting against four baselines,
@@ -211,12 +213,12 @@ current status, verification evidence, and known boundaries.
 - Read-only simulation audit for recorded objectives, solver constraints,
   reproducibility, human approval and preservation of UNKNOWN resources. Every
   result is `SIMULATED`; no dispatch or allocation is authorized.
-- Fifteen-category readiness scorecard (11 mandatory gates, 4 advisory) derived
+- Sixteen-category readiness scorecard (12 mandatory gates, 4 advisory) derived
   from persisted evidence. No PASS is hardcoded; manual attestations require
-  admin identity and evidence. Live state is **NOT_READY**: data freshness
-  failed (latest data 511 days old), model-versus-baseline failed (0/4
-  datasets), human review, correlation and infrastructure were blocked by
-  absent evidence, and no controlled pilot exists.
+  admin identity and evidence. Live state remains **NOT_READY**: model-versus-
+  baseline failed (0/6 datasets), ground truth and correlation are blocked by
+  absent evidence, infrastructure covers 1/7 domains, and no controlled pilot
+  exists. Phase 11 refreshed freshness to PASS with data through 2026-09-30.
 - New staff workspace `/pilot` (readiness, pilots, review queue, correlation,
   traceability, infrastructure, simulation) with loading/empty/error states,
   admin actions, and JSON exports. Migration `0018_phase10_pilot_governance`
@@ -225,6 +227,49 @@ current status, verification evidence, and known boundaries.
 - See [backend/docs/phase10.md](backend/docs/phase10.md) for the lifecycle,
   review protocol, metric definitions, scorecard gates, API, verification and
   limitations.
+
+### Phase 11 — real ground truth and urban data integration
+
+- Safe acquisition adapters with source-specific allowlists, no redirects,
+  timeouts, retries, byte/record caps, dual SHA-256, schema and spatial
+  validation, duplicate/invalid counts, lineage, immutable snapshots and
+  explicit failure handling. Failed fetches never replace valid current data.
+- One real infrastructure dataset integrated: NYC DOT Bridge Ratings
+  (`4yue-vjfc`), 794 unique BINs from 3,204 rows, EPSG:4326, quality `WARN`.
+  Raw and normalized hashes were independently recomputed. Source verification
+  is metadata-only; physical condition is not field-verified. One of seven
+  domains is integrated, so infrastructure-aware model comparison is
+  `NOT_ASSESSED`.
+- Ground-truth framework distinguishes citizen reports, AI predictions, human
+  observations, official records, field observations, independent evidence and
+  resolution evidence. Statuses are `UNVERIFIED`, `IN_REVIEW`, `VERIFIED`,
+  `REJECTED` and `INSUFFICIENT_EVIDENCE`; review requires independent
+  evidence, a different reviewer, server identity and append-only events.
+  Verification never changes the original report or a model score.
+- Immutable correlation reference universes with completeness attestation,
+  version, optional validated reference snapshot and reviewer independence.
+  Recall, F1, false
+  negatives and true negatives remain null without a complete universe and all
+  labels; no synthetic true negatives are fabricated.
+- Fresh external validation on NYC 311 Brooklyn and Manhattan 2026 Q3 using the
+  unchanged Phase 9 configuration. CivicFlow did not beat the strongest
+  baseline on either slice (Brooklyn PR-AUC 0.830275 versus 0.912868; Manhattan
+  0.866929 versus 0.936024). The unfavorable results are preserved and no model
+  is activated.
+- Extended `/pilot` with an Evidence tab showing the dataset registry, snapshot
+  hashes/lineage, quality, freshness, ground truth, correlation universes,
+  infrastructure coverage, external results and blockers. All counts are
+  server-derived; `REAL`, `SYNTHETIC`, `SIMULATED`, `MIXED` and `UNKNOWN`
+  remain distinct.
+- Migrations `0020_phase11_evidence`, `0021_gt_provenance` and
+  `0022_snapshot_provenance` add five tables, RLS staff policies, append-only
+  event triggers, infrastructure asset provenance and explicit provenance
+  columns. Live readiness is `NOT_READY`: 0 verified operational ground truth,
+  0 correlation universes, 1/7 infrastructure domains and 0/2 fresh results
+  beating the strongest baseline.
+- See [backend/docs/phase11.md](backend/docs/phase11.md) for sources, licensing,
+  acquisition controls, review workflow, external methodology, API, RLS,
+  verification and limitations.
 
 ### Phase 7 — operational maturity and intelligence validation
 
@@ -370,7 +415,7 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (35 application tables)
+    models/                   SQLAlchemy model registry (53 application tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
@@ -383,11 +428,14 @@ backend/
     evaluation/               Transparent classification/calibration metrics
     ingestion/                Adapter interfaces, idempotent ingest, quality
     operations/               Alerts, notifications, reviews, dashboard
+    evidence/                 Allowlisted acquisition, snapshots, ground truth
+    validation/               Dataset registry, backtests, fresh external holdouts
     api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config, quality
     api/v1/endpoints/decisions.py  Scenarios, resources, simulate, compare
     api/v1/endpoints/governance.py  Models and evaluations
     api/v1/endpoints/operations.py  Sources, quality, alerts, notifications, dashboard
     api/v1/endpoints/reviews.py     Human plan review and approval
+    api/v1/endpoints/phase11.py     Evidence workspace, snapshots, ground truth
     seed.py                   Deterministic development seed
   alembic/
     versions/0001_initial_schema.py
@@ -405,6 +453,13 @@ backend/
     versions/0013_phase7_hardening.py
     versions/0014_model_version_uniqueness.py
     versions/0015_ingested_record_provenance.py
+    versions/0016_phase8_validation.py
+    versions/0017_phase9_diagnostics.py
+    versions/0018_phase10_pilot_governance.py
+    versions/0019_phase10_correlation.py
+    versions/0020_phase11_evidence.py
+    versions/0021_gt_provenance.py
+    versions/0022_snapshot_provenance.py
   tests/                      Config, DB, auth, API, migration, seed tests
 ```
 
@@ -419,10 +474,10 @@ backend/
 The committed test suite uses isolated SQLite for structural constraints and
 offline SQL rendering for PostgreSQL/PostGIS. A live Supabase integration
 validation was also performed: migrations are applied through
-`0019_phase10_correlation`, PostGIS 3.3.7 is installed, the RLS/ACL matrix
+`0022_snapshot_provenance`, PostGIS 3.3.7 is installed, the RLS/ACL matrix
 has been exercised transactionally and with isolated real Auth users, the
-Phase 10 staff RLS policies and append-only triggers were checked live, and
-private Storage upload/signed-download was verified end to end. See
+Phase 10 and Phase 11 staff RLS policies and append-only triggers were checked
+live, and private storage upload/signed-download was verified end to end. See
 `backend/docs/auth-and-rls.md` for database setup and policy details,
 `backend/docs/incidents.md` for the lifecycle contract,
 `backend/docs/spatial.md` for the viewport API,
@@ -576,7 +631,7 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `GET` | `/api/v1/governance/models/{id}/events` | Model lifecycle audit events |
 | `GET` | `/api/v1/governance/models/{left}/compare/{right}` | Configuration/evaluation version comparison |
 | `POST` `GET` | `/api/v1/governance/evaluations` | Persist/list labelled evaluation results |
-| `GET` | `/api/v1/governance/readiness` | Derived 15-category pilot readiness scorecard |
+| `GET` | `/api/v1/governance/readiness` | Derived 16-category pilot readiness scorecard |
 | `GET` `POST` | `/api/v1/governance/readiness/evidence` | Read or ADMIN-attest advisory evidence |
 | `GET` `POST` | `/api/v1/governance/pilots` | Staff pilot list / ADMIN pilot creation |
 | `GET` | `/api/v1/governance/pilots/{id}` | Pilot detail, reviewers, allowed actions, history |
@@ -600,6 +655,16 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `GET` | `/api/v1/governance/traceability/runs` | Persisted risk assessment list with review counts |
 | `GET` | `/api/v1/governance/traceability/runs/{id}` | Read-only model/input/factor/review trace |
 | `GET` | `/api/v1/governance/traceability/runs/{id}/export` | Structured JSON trace attachment |
+| `GET` | `/api/v1/governance/evidence/workspace` | Server-derived Phase 11 evidence workspace |
+| `GET` | `/api/v1/governance/evidence/snapshots[/{id}]` | Bounded snapshot registry/detail with provenance |
+| `POST` | `/api/v1/governance/evidence/acquire` | ADMIN allowlisted infrastructure acquisition |
+| `POST` | `/api/v1/governance/evidence/snapshots/{id}/verify` | ADMIN independent hash/count recomputation |
+| `GET` `POST` | `/api/v1/governance/evidence/ground-truth` | Staff assertion list / creation |
+| `POST` | `/api/v1/governance/evidence/ground-truth/{id}/submit` | Submit an assertion for review |
+| `POST` | `/api/v1/governance/evidence/ground-truth/{id}/review` | Human decision with evidence, creator excluded |
+| `GET` | `/api/v1/governance/evidence/ground-truth/{id}/events` | Append-only ground-truth history |
+| `GET` `POST` | `/api/v1/governance/evidence/correlation/universes` | Staff list / ADMIN immutable universe creation |
+| `GET` | `/api/v1/governance/evidence/correlation/universes/{id}` | Universe detail and completeness attestation |
 | `GET` `POST` | `/api/v1/operations/sources` | Source registry / ADMIN registration |
 | `GET` `POST` | `/api/v1/operations/sources/{id}/runs` | Run history / idempotent manual ingestion |
 | `GET` | `/api/v1/operations/quality` | Source freshness and quality |
@@ -763,14 +828,14 @@ details, Supabase setup, and security caveats.
 
 ## Live integration validation
 
-The configured Supabase project was validated on **2026-11-23**:
+The configured Supabase project was validated on **2026-11-23** and rechecked on **2026-11-24**:
 
 - Database and Auth project references match between backend and frontend.
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0017_phase9_diagnostics`; 37 application tables, 41
-  application RLS policies, 58 foreign keys, 15 unique constraints, and 5 GIST
+- Alembic is at `0022_snapshot_provenance`; 53 application tables, 57
+  application RLS policies, 102 foreign keys, 29 unique constraints, and 6 GIST
   indexes exist (plus `alembic_version` and PostGIS
   `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
@@ -782,7 +847,7 @@ The configured Supabase project was validated on **2026-11-23**:
 - Live least-privilege hardening removed inherited `TRUNCATE`, `REFERENCES`,
   `TRIGGER`, and `MAINTAIN` grants from `anon`/`authenticated`; `service_role`
   was intentionally left unchanged. Anonymous now has no application-table
-  grants. After `0015`, authenticated has SELECT on all 35 application tables,
+  grants. After `0022`, authenticated has SELECT on the application tables,
   INSERT on incidents and generic scenarios, column UPDATE on
   `profiles.full_name/phone` only, and no direct INSERT on `incident_evidence`,
   `incident_relationships`, `risk_model_runs`, `risk_cell_snapshots`, or the
@@ -816,6 +881,20 @@ The configured Supabase project was validated on **2026-11-23**:
   the strongest baseline on **0 of 4** datasets, and the pre-registered
   `drop_trend` candidate is recorded as `NOT_ACTIVATED` because external
   holdout evidence was mixed. No model configuration changed.
+- Phase 10 live validation (2026-11-24) applied migrations
+  `0018_phase10_pilot_governance` and `0019_phase10_correlation`, exercised
+  staff-only pilot/review/correlation/infrastructure/traceability APIs, checked
+  the then-15-category scorecard (16 from Phase 11) and `NOT_READY` state, and verified the new RLS
+  policies and append-only triggers inside rolled-back transactions. No pilot
+  was approved or activated and no model-registry row was created.
+- Phase 11 live validation (2026-11-24) applied `0020_phase11_evidence`,
+  `0021_gt_provenance` and `0022_snapshot_provenance`; acquired and
+  independently recomputed one real infrastructure snapshot (794 NYC bridge
+  assets) and two fresh Q3 2026 NYC 311 datasets; exercised the evidence
+  workspace and ground-truth API; and confirmed worker visibility, anonymous
+  denial and append-only rejection for the five new tables. Both fresh
+  backtests failed to beat the strongest baseline and are preserved as such.
+  No model, pilot, dispatch, alert or resource allocation was activated.
 - Phase 7 live headless-Chrome validation rendered `/operations` with a real
   source, alert, governance, risk, approval, and safety state, and captured a
   screenshot.
@@ -993,9 +1072,14 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Reviewer-verified correlation evaluation | Complete; API + browser tested with synthetic fixtures; not empirical ground truth |
 | Metadata-only infrastructure readiness registry | Complete; API + browser tested on disposable DB; no assets fetched anywhere |
 | Decision-simulation constraint audit | Complete; API/browser tested; live simulation set is empty |
-| 15-category readiness scorecard and activation gate | Complete; live state `NOT_READY` with 11 recorded blockers |
+| 16-category readiness scorecard and activation gate | Complete; live state `NOT_READY` (5 blocked, 1 fail, 4 not assessed) |
 | Phase 10 migration, staff RLS, append-only triggers | Applied live; 11 tables, 11 policies, 5 append-only triggers verified |
-| Authoritative municipal hazard outcomes / field labels | Not included; 311 activity is not verified impact ground truth |
+| Phase 11 hashed acquisition and snapshot provenance | Complete; 3 current real snapshots with recomputed SHA-256 |
+| Real NYC bridge infrastructure integration | Complete; 794 assets, 1/7 domains, metadata-only source verification |
+| Human ground-truth and correlation-universe framework | Implemented/tested with synthetic fixtures; 0 operational verified records live |
+| Fresh Q3 2026 external validation | Complete; Brooklyn and Manhattan evaluated, both below strongest baseline |
+| Phase 11 staff RLS and append-only event guards | Applied live; 5 tables, 5 policies, 2 append-only triggers verified |
+| Authoritative municipal hazard outcomes / field labels | Not included; no human-verified operational ground truth or complete correlation universe |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is

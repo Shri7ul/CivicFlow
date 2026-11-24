@@ -47,7 +47,8 @@ In scope:
 - reviewer-verified duplicate-correlation evaluation with honest metrics;
 - metadata-only infrastructure source readiness;
 - validation of Phase 8 simulation constraints and UNKNOWN preservation;
-- a 15-category readiness scorecard with mandatory gates and evidence.
+- a readiness scorecard with mandatory gates and evidence (15 categories in
+  Phase 10; Phase 11 adds mandatory ground truth and extends it to 16).
 
 Out of scope by design:
 
@@ -69,7 +70,7 @@ backend/app/governance/traceability.py assessment trace and provenance
 backend/app/governance/correlation.py candidate review and metrics
 backend/app/governance/infrastructure.py metadata registry
 backend/app/governance/simulation.py  read-only constraint audit
-backend/app/governance/readiness.py   15-category scorecard
+backend/app/governance/readiness.py   readiness scorecard (16 in Phase 11)
 backend/app/governance/serialization.py response shaping and disclaimers
 backend/app/api/v1/endpoints/phase10.py staff/admin API
 backend/alembic/versions/0018_phase10_pilot_governance.py schema
@@ -261,8 +262,9 @@ false`.
 
 ## Pilot readiness scorecard
 
-Fifteen categories are derived from persisted evidence. Eleven are mandatory
-gates; four are advisory attestations.
+Sixteen categories are derived from persisted evidence after the Phase 11
+extension. Phase 10 introduced 15 (11 mandatory, 4 advisory); Phase 11 adds the
+mandatory ground-truth maturity gate, giving 12 mandatory and 4 advisory.
 
 | Category | Gate | Owner |
 | --- | --- | --- |
@@ -273,6 +275,7 @@ gates; four are advisory attestations.
 | Model robustness | mandatory | Model owner |
 | Human review coverage | mandatory | Review lead |
 | Correlation maturity | mandatory | Review lead |
+| Ground truth maturity | mandatory | Review lead |
 | Infrastructure availability | mandatory | Infrastructure data owner |
 | Auditability | mandatory | Security lead |
 | Security | advisory | Security lead |
@@ -320,6 +323,11 @@ but the live Phase 10 tables are empty after the verification fixtures were
 removed. There is no live pilot, review case, correlation candidate,
 infrastructure source, readiness attestation, simulation, or risk run. This is
 the honest production state, not a test fixture.
+
+Phase 11 later refreshed data freshness with Q3 2026 datasets and added real
+infrastructure plus ground-truth tables. The live score remains `NOT_READY`;
+see [phase11.md](phase11.md) for the current counts and blockers rather than
+treating this Phase 10 snapshot as current.
 
 ## Data model and migration
 

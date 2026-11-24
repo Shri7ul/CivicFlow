@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     intelligence,
     operations,
     phase10,
+    phase11,
     reviews,
     risk,
     validation,
@@ -42,6 +43,9 @@ api_router.include_router(
 )
 api_router.include_router(
     phase10.router, prefix="/governance", tags=["phase10-governance"]
+)
+api_router.include_router(
+    phase11.router, prefix="/governance", tags=["phase11-evidence"]
 )
 api_router.include_router(
     operations.router, prefix="/operations", tags=["operations"]

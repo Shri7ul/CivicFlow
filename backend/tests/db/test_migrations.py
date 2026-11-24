@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0019_phase10_correlation"
+    assert version == "0022_snapshot_provenance"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -126,6 +126,9 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0017_phase9_diagnostics.py",
         "0018_phase10_pilot_governance.py",
         "0019_phase10_correlation.py",
+        "0020_phase11_evidence.py",
+        "0021_gt_provenance.py",
+        "0022_snapshot_provenance.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
@@ -208,3 +211,31 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
     assert "synthetic_fixture" in provenance
     assert "correlation_candidates" in provenance
     assert "0018_phase10_pilot_governance" in provenance
+    phase11 = versions[19].read_text(encoding="utf-8")
+    for table in (
+        "evidence_snapshots",
+        "evidence_snapshot_events",
+        "ground_truth_records",
+        "ground_truth_events",
+        "correlation_universes",
+    ):
+        assert table in phase11
+    assert "PHASE11_TABLES" in phase11
+    assert "_read_staff" in phase11
+    assert "FOR SELECT TO authenticated USING (public.is_worker_or_admin())" in phase11
+    assert "REVOKE ALL PRIVILEGES" in phase11
+    assert "APPEND_ONLY_TABLES" in phase11
+    assert "civicflow_prevent_append_only_mutation" in phase11
+    assert "BEFORE UPDATE OR DELETE" in phase11
+    assert "ck_infrastructure_assets_ck_infrastructure_assets_asset_type" in phase11
+    assert "0019_phase10_correlation" in phase11
+    gt_provenance = versions[20].read_text(encoding="utf-8")
+    assert "ground_truth_records" in gt_provenance
+    assert "provenance_kind" in gt_provenance
+    assert "ck_ground_truth_records_ground_truth_provenance" in gt_provenance
+    assert "0020_phase11_evidence" in gt_provenance
+    snapshot_provenance = versions[21].read_text(encoding="utf-8")
+    assert "evidence_snapshots" in snapshot_provenance
+    assert "provenance_kind" in snapshot_provenance
+    assert "ck_evidence_snapshots_evidence_snapshot_provenance" in snapshot_provenance
+    assert "0021_gt_provenance" in snapshot_provenance

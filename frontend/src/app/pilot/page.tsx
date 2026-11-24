@@ -6,9 +6,9 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { PilotWorkspace } from "@/components/pilot/pilot-workspace";
 
 export const metadata: Metadata = {
-  title: "Pilot readiness",
+  title: "Evidence and pilot readiness",
   description:
-    "Phase 10 controlled pilot governance: human risk review, assessment traceability, reviewer-verified correlation evaluation, infrastructure metadata, simulation constraints and readiness gates.",
+    "Phase 11 evidence integrity and Phase 10 governance: real dataset provenance, human ground truth, correlation reference universes, infrastructure coverage, pilot review and readiness gates.",
 };
 
 export default function PilotPage() {

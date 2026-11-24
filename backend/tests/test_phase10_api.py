@@ -16,9 +16,11 @@ from app.db.session import get_db_session
 from app.main import create_app
 from app.models import (
     CorrelationDecision,
+    CorrelationUniverse,
     Incident,
     IncidentCategory,
     IncidentSeverity,
+    ProvenanceKind,
     InfrastructureValidationStatus,
     ModelVersion,
     Pilot,
@@ -361,6 +363,20 @@ def test_correlation_metrics_are_honest_about_missing_labels(
     incidents = [
         _incident(db_session, admin, f"Synthetic {name}") for name in "ABCD"
     ]
+    universe = CorrelationUniverse(
+        universe_key="synthetic-test",
+        name="Synthetic correlation fixture",
+        version="fixture-v1",
+        provenance_kind=ProvenanceKind.SYNTHETIC,
+        reference_complete=True,
+        reference_size=2,
+        reference_note="Labelled synthetic fixture universe.",
+        candidate_method="token-cosine",
+        candidate_method_version="corr-v1",
+        created_by=admin.id,
+    )
+    db_session.add(universe)
+    db_session.commit()
     with _client(db_session) as client:
         missing_provenance = client.post(
             "/api/v1/governance/correlation/candidates",
@@ -437,6 +453,14 @@ def test_correlation_metrics_are_honest_about_missing_labels(
         assert complete["is_simulated"] is True
         assert complete["synthetic_provenance"] == "SYNTHETIC"
         assert complete["reference"]["complete"] is True
+        db_session.delete(universe)
+        db_session.commit()
+        unattested = client.get(
+            "/api/v1/governance/correlation/metrics?universe_key=synthetic-test",
+            headers=_auth(admin),
+        ).json()
+        assert unattested["metrics"]["recall"] is None
+        assert "no registered reference universe" in unattested["reference"]["recall_reason"]
 
 
 def test_infrastructure_registry_requires_metadata_before_verification(
@@ -520,8 +544,8 @@ def test_readiness_is_not_ready_without_evidence(db_session: Session) -> None:
         body = scorecard.json()
         assert body["overall"] == "NOT_READY"
         assert body["ready_for_activation"] is False
-        assert len(body["categories"]) == 15
-        assert body["counts"]["mandatory_total"] == 11
+        assert len(body["categories"]) == 16
+        assert body["counts"]["mandatory_total"] == 12
         assert body["counts"]["advisory_total"] == 4
         assert body["activation_blockers"]
         derived = client.post(

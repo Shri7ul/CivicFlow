@@ -72,6 +72,11 @@ EXPECTED_TABLES = {
     "infrastructure_source_events",
     "readiness_evidence",
     "readiness_evidence_events",
+    "evidence_snapshots",
+    "evidence_snapshot_events",
+    "ground_truth_records",
+    "ground_truth_events",
+    "correlation_universes",
 }
 
 

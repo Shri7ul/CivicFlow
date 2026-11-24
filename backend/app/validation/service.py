@@ -26,9 +26,9 @@ from app.validation.correlation import run_correlation_validation
 from app.validation.dataset import NYC311_BBOX, load_snapshot, normalize_nyc311_record
 from app.validation.decision import run_decision_validation
 from app.validation.risk import run_risk_backtest
+from app.version import APP_VERSION
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "validation"
-APP_VERSION = "0.9.0"
 
 
 class ValidationError(ValueError):
@@ -272,6 +272,11 @@ def run_risk_experiment(
 ) -> ValidationExperiment:
     config = resolve_risk_config(session, settings)
     records, metadata = dataset_records(session, dataset)
+    if dataset.status != ValidationDatasetStatus.VALIDATED:
+        raise ValidationError(
+            "Dataset is not validated; it cannot be evaluated.",
+            code="dataset_not_validated",
+        )
     bbox_value = (
         metadata.get("bbox")
         or (metadata.get("query") or {}).get("bbox")

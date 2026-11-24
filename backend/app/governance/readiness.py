@@ -12,6 +12,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.enums import (
+    EvidenceSnapshotStatus,
+    GroundTruthStatus,
     PilotMode,
     PilotReviewerRole,
     PilotStatus,
@@ -32,11 +34,17 @@ from app.models.pilot import (
     RiskReviewCase,
     RiskReviewEvent,
 )
+from app.models.evidence import (
+    CorrelationUniverse,
+    EvidenceSnapshot,
+    GroundTruthRecord,
+)
+from app.models.infrastructure import InfrastructureAsset
 from app.models.profile import Profile
 from app.models.validation import ValidationDataset, ValidationExperiment
 from app.validation.research import phase9_summary
 
-PROTOCOL = "phase10-readiness-v1"
+PROTOCOL = "phase11-readiness-v2"
 FRESHNESS_DAYS = 180
 INFRASTRUCTURE_DOMAINS = (
     ("ROADS", "Roads"),
@@ -217,15 +225,62 @@ def _data_quality(session: Session) -> dict:
             refs=["validation_datasets"],
         ),
     ]
+    snapshots = session.scalars(
+        select(EvidenceSnapshot).where(
+            EvidenceSnapshot.status == EvidenceSnapshotStatus.VALIDATED,
+            EvidenceSnapshot.is_current.is_(True),
+        )
+    ).all()
+    bad_snapshots = [
+        item.snapshot_key
+        for item in snapshots
+        if len(item.snapshot_sha256 or "") != 64
+        or item.record_count <= 0
+        or not item.lineage
+    ]
+    criteria.append(
+        _criterion(
+            "dataset.evidence_snapshots",
+            "Current evidence snapshots retain hash, records and lineage",
+            (
+                ReadinessStatus.PASS
+                if snapshots and not bad_snapshots
+                else (
+                    ReadinessStatus.FAIL
+                    if snapshots
+                    else ReadinessStatus.BLOCKED
+                )
+            ),
+            (
+                f"{len(snapshots)} current validated snapshot(s); "
+                f"{len(bad_snapshots)} incomplete."
+                if snapshots
+                else "No current validated evidence snapshot exists."
+            ),
+            refs=["evidence_snapshots"],
+        )
+    )
     if not completed:
         status = ReadinessStatus.BLOCKED
         summary = "No validated dataset inventory exists."
     elif issues:
         status = ReadinessStatus.FAIL
         summary = "One or more completed datasets lack required provenance."
+    elif not snapshots:
+        status = ReadinessStatus.BLOCKED
+        summary = (
+            f"{len(completed)} historical dataset(s) exist, but no current "
+            "validated evidence snapshot is retained."
+        )
+    elif bad_snapshots:
+        status = ReadinessStatus.FAIL
+        summary = "Current evidence snapshots lack required hash, records or lineage."
     else:
         status = ReadinessStatus.PASS
-        summary = f"{len(completed)} complete dataset snapshots with SHA-256 provenance."
+        summary = (
+            f"{len(completed)} complete dataset(s); {len(snapshots)} current "
+            "validated evidence snapshot(s) with retained lineage."
+        )
     return _category(
         "data_quality",
         "Data quality",
@@ -342,6 +397,50 @@ def _performance(session: Session) -> dict:
                     "delta": round(float(risk["pr_auc"]) - float(best["pr_auc"]), 6),
                 }
             )
+    fresh_rows = session.execute(
+        select(ValidationExperiment, ValidationDataset)
+        .join(ValidationDataset, ValidationExperiment.dataset_id == ValidationDataset.id)
+        .where(
+            ValidationExperiment.experiment_type
+            == ValidationExperimentType.RISK_BACKTEST,
+            ValidationExperiment.status == ValidationStatus.COMPLETED,
+        )
+        .order_by(ValidationExperiment.created_at.desc())
+    ).all()
+    fresh_comparisons = []
+    seen_fresh = set()
+    for experiment, dataset in fresh_rows:
+        if not (dataset.dataset_metadata or {}).get("phase11_evaluation_role"):
+            continue
+        if dataset.dataset_key in seen_fresh:
+            continue
+        seen_fresh.add(dataset.dataset_key)
+        methods = (experiment.metrics or {}).get("methods", {})
+        risk = methods.get("civicflow_risk") or {}
+        baselines = {
+            key: value
+            for key, value in (experiment.baselines or {}).items()
+            if value.get("pr_auc") is not None
+        }
+        if risk.get("pr_auc") is None or not baselines:
+            continue
+        best_name, best = max(
+            baselines.items(), key=lambda item: item[1]["pr_auc"]
+        )
+        fresh_comparisons.append(
+            {
+                "dataset": dataset.dataset_key,
+                "region": dataset.region,
+                "risk": risk.get("pr_auc"),
+                "baseline": best.get("pr_auc"),
+                "baseline_method": best_name,
+                "delta": round(
+                    float(risk["pr_auc"]) - float(best["pr_auc"]), 6
+                ),
+                "fresh": True,
+            }
+        )
+    comparisons.extend(fresh_comparisons)
     wins = [item for item in comparisons if item["delta"] > 0]
     if not comparisons:
         status = ReadinessStatus.BLOCKED
@@ -369,7 +468,33 @@ def _performance(session: Session) -> dict:
             "PR-AUC versus strongest baseline on every dataset",
             status,
             evidence,
-            refs=["phase9-research-report", "validation_experiments"],
+            refs=[
+                "phase9-research-report",
+                "validation_experiments",
+                "phase11-fresh-external",
+            ],
+        ),
+        _criterion(
+            "model.fresh_external_holdout",
+            "Fresh external holdout comparison is persisted",
+            (
+                ReadinessStatus.PASS
+                if fresh_comparisons
+                and all(item["delta"] > 0 for item in fresh_comparisons)
+                else (
+                    ReadinessStatus.FAIL
+                    if fresh_comparisons
+                    else ReadinessStatus.BLOCKED
+                )
+            ),
+            (
+                f"{sum(1 for item in fresh_comparisons if item['delta'] > 0)}/"
+                f"{len(fresh_comparisons)} fresh external dataset(s) beat the "
+                "strongest baseline; underperformance is retained."
+                if fresh_comparisons
+                else "No fresh post-Phase-9 external holdout is registered."
+            ),
+            refs=["validation_experiments", "phase11-fresh-external"],
         ),
         _criterion(
             "model.mean_pr_auc",
@@ -527,7 +652,99 @@ def _human_review(session: Session) -> dict:
     )
 
 
+def _ground_truth(session: Session) -> dict:
+    records = session.scalars(select(GroundTruthRecord)).all()
+    operational = [
+        item for item in records if item.provenance_kind.value == "OPERATIONAL"
+    ]
+    verified = [
+        item for item in operational if item.status == GroundTruthStatus.VERIFIED
+    ]
+    reviewers = {
+        item.verified_by for item in verified if item.verified_by is not None
+    }
+    complete = [
+        item
+        for item in verified
+        if item.verification_method
+        and item.verified_at
+        and item.verification_evidence_refs
+        and item.verified_by
+    ]
+    non_ai = [
+        item
+        for item in verified
+        if item.source_type.value != "AI_PREDICTION"
+    ]
+    if not operational:
+        status = ReadinessStatus.BLOCKED
+        summary = "No operational ground-truth assertion is registered."
+    elif not verified:
+        status = ReadinessStatus.IN_PROGRESS
+        summary = (
+            f"{len(operational)} assertion(s) exist; none has a human verification "
+            "decision."
+        )
+    elif len(verified) >= 5 and len(reviewers) >= 2 and len(complete) == len(verified) and non_ai:
+        status = ReadinessStatus.PASS
+        summary = (
+            f"{len(verified)} operationally verified assertion(s) by "
+            f"{len(reviewers)} reviewer(s), with evidence and method recorded."
+        )
+    else:
+        status = ReadinessStatus.FAIL
+        summary = (
+            f"{len(verified)}/{len(operational)} assertions verified by "
+            f"{len(reviewers)} reviewer(s); requires >=5 verified, >=2 reviewers, "
+            "non-AI evidence, and complete method/evidence references."
+        )
+    criteria = [
+        _criterion(
+            "ground_truth.volume",
+            "At least five operational assertions",
+            ReadinessStatus.PASS if len(operational) >= 5 else ReadinessStatus.FAIL,
+            f"{len(operational)} operational assertion(s).",
+            refs=["ground_truth_records"],
+        ),
+        _criterion(
+            "ground_truth.verified",
+            "Human-verified physical assertions",
+            ReadinessStatus.PASS if len(verified) >= 5 else ReadinessStatus.FAIL,
+            f"{len(verified)} verified; no AI prediction is auto-verified.",
+            refs=["ground_truth_records"],
+        ),
+        _criterion(
+            "ground_truth.independence",
+            "At least two independent verifiers",
+            ReadinessStatus.PASS if len(reviewers) >= 2 else ReadinessStatus.FAIL,
+            f"{len(reviewers)} distinct verifier identity(ies).",
+            refs=["ground_truth_events"],
+        ),
+        _criterion(
+            "ground_truth.evidence",
+            "Every verification records method and evidence",
+            (
+                ReadinessStatus.PASS
+                if verified and len(complete) == len(verified)
+                else ReadinessStatus.FAIL
+            ),
+            f"{len(complete)}/{len(verified)} verified record(s) complete.",
+            refs=["ground_truth_records"],
+        ),
+    ]
+    return _category(
+        "ground_truth_maturity",
+        "Ground-truth maturity",
+        status,
+        summary,
+        criteria,
+        owner="Review lead",
+    )
+
+
 def _correlation(session: Session) -> dict:
+    universes = session.scalars(select(CorrelationUniverse)).all()
+    complete_universes = [item for item in universes if item.reference_complete]
     total = int(
         session.scalar(select(func.count()).select_from(CorrelationCandidate)) or 0
     )
@@ -615,6 +832,18 @@ def _correlation(session: Session) -> dict:
             "Recall is never computed without it.",
             refs=["correlation_candidates"],
         ),
+        _criterion(
+            "correlation.universe",
+            "Immutable complete reference-universe attestation",
+            (
+                ReadinessStatus.PASS
+                if complete_universes
+                else ReadinessStatus.FAIL
+            ),
+            f"{len(universes)} universe(s); {len(complete_universes)} attested "
+            "complete. Incomplete universes keep recall/F1 null.",
+            refs=["correlation_universes"],
+        ),
     ]
     return _category(
         "correlation_maturity",
@@ -633,7 +862,29 @@ def _infrastructure(session: Session) -> dict:
         for item in sources
         if item.validation_status.value == "VERIFIED"
     ]
+    asset_counts = {
+        source_id: int(count)
+        for source_id, count in session.execute(
+            select(InfrastructureAsset.source_id, func.count(InfrastructureAsset.id))
+            .where(InfrastructureAsset.is_active.is_(True))
+            .group_by(InfrastructureAsset.source_id)
+        ).all()
+        if source_id is not None
+    }
+    latest_snapshots = {}
+    for source in verified:
+        latest_snapshots[source.id] = session.scalar(
+            select(EvidenceSnapshot)
+            .where(
+                EvidenceSnapshot.infrastructure_source_id == source.id,
+                EvidenceSnapshot.status == EvidenceSnapshotStatus.VALIDATED,
+                EvidenceSnapshot.is_current.is_(True),
+            )
+            .order_by(EvidenceSnapshot.retrieved_at.desc())
+            .limit(1)
+        )
     criteria = []
+    integrated_domains = set()
     for domain, label in INFRASTRUCTURE_DOMAINS:
         rows = [item for item in verified if item.category == domain]
         missing = [
@@ -644,34 +895,74 @@ def _infrastructure(session: Session) -> dict:
             or not item.crs
             or not item.geographic_coverage
         ]
+        integrated = [
+            item
+            for item in rows
+            if latest_snapshots.get(item.id) is not None
+            and asset_counts.get(item.id, 0) > 0
+        ]
+        if integrated:
+            integrated_domains.add(domain)
         status = (
             ReadinessStatus.PASS
-            if rows and not missing
+            if integrated and not missing
             else (ReadinessStatus.FAIL if rows else ReadinessStatus.BLOCKED)
         )
+        if integrated:
+            evidence = (
+                f"{len(integrated)} integrated source(s), "
+                f"{sum(asset_counts.get(item.id, 0) for item in integrated)} active "
+                "asset(s), validated current snapshot."
+            )
+        elif rows:
+            evidence = (
+                f"{len(rows)} verified metadata source(s), but no integrated "
+                "validated snapshot with active assets."
+            )
+        else:
+            evidence = f"No verified {label.lower()} source is registered."
         criteria.append(
             _criterion(
                 f"infrastructure.{domain.lower()}",
-                f"{label} source verified",
+                f"{label} source verified and integrated",
                 status,
-                (
-                    f"{len(rows)} verified source(s)"
-                    + (f"; incomplete: {', '.join(missing)}" if missing else "")
-                ),
-                refs=["infrastructure_sources"],
+                evidence + (f"; incomplete: {', '.join(missing)}" if missing else ""),
+                refs=["infrastructure_sources", "evidence_snapshots", "infrastructure_assets"],
             )
         )
+    criteria.append(
+        _criterion(
+            "infrastructure.domain_completeness",
+            "All seven infrastructure domains integrated",
+            (
+                ReadinessStatus.PASS
+                if len(integrated_domains) == len(INFRASTRUCTURE_DOMAINS)
+                else ReadinessStatus.FAIL
+            ),
+            f"{len(integrated_domains)}/{len(INFRASTRUCTURE_DOMAINS)} domains have "
+            "a validated current snapshot and active assets.",
+            refs=["infrastructure_sources", "infrastructure_assets"],
+        )
+    )
     if not verified:
         status = ReadinessStatus.BLOCKED
         summary = "No infrastructure source has passed metadata validation."
-    elif len({item.category for item in verified}) >= len(INFRASTRUCTURE_DOMAINS):
+    elif len(integrated_domains) == len(INFRASTRUCTURE_DOMAINS):
         status = ReadinessStatus.PASS
-        summary = "All seven infrastructure domains have a verified metadata source."
+        summary = "All seven infrastructure domains have integrated validated data."
+    elif integrated_domains:
+        status = ReadinessStatus.IN_PROGRESS
+        summary = (
+            f"{len(integrated_domains)} of {len(INFRASTRUCTURE_DOMAINS)} "
+            "infrastructure domains have integrated validated data; metadata alone "
+            "is not counted as integration."
+        )
     else:
         status = ReadinessStatus.IN_PROGRESS
         summary = (
             f"{len({item.category for item in verified})} of "
-            f"{len(INFRASTRUCTURE_DOMAINS)} infrastructure domains have a verified source."
+            f"{len(INFRASTRUCTURE_DOMAINS)} domains have verified metadata, but "
+            "none has an integrated validated snapshot."
         )
     return _category(
         "infrastructure_availability",
@@ -693,6 +984,8 @@ def _auditability(session: Session) -> dict:
         "correlation_reviews",
         "infrastructure_source_events",
         "readiness_evidence_events",
+        "evidence_snapshot_events",
+        "ground_truth_events",
     ]
     present = [table for table in event_tables if table in tables]
     status = (
@@ -706,7 +999,10 @@ def _auditability(session: Session) -> dict:
             "Append-only event tables present",
             status,
             f"{len(present)}/{len(event_tables)} append-only event tables present.",
-            refs=["migration:0018_phase10_pilot_governance"],
+            refs=[
+                "migration:0018_phase10_pilot_governance",
+                "migration:0020_phase11_evidence",
+            ],
         ),
         _criterion(
             "audit.no_mutation_routes",
@@ -944,6 +1240,7 @@ def assess_readiness(session: Session, pilot: Pilot | None = None) -> dict:
         _performance(session),
         _robustness(session),
         _human_review(session),
+        _ground_truth(session),
         _correlation(session),
         _infrastructure(session),
         _auditability(session),

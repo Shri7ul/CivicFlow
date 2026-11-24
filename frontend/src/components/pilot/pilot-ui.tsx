@@ -270,7 +270,7 @@ export function ReadinessScorecard({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
-            Phase 10 readiness
+            Phase 11 readiness
           </p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">
             {title}

@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { EvidenceWorkspace } from "@/components/pilot/evidence-workspace";
 import {
   Card,
   EmptyState,
@@ -61,7 +62,8 @@ type TabKey =
   | "correlation"
   | "traceability"
   | "infrastructure"
-  | "simulation";
+  | "simulation"
+  | "evidence";
 
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: "overview", label: "Readiness", hint: "Scorecard and gates" },
@@ -71,6 +73,7 @@ const TABS: { key: TabKey; label: string; hint: string }[] = [
   { key: "traceability", label: "Traceability", hint: "Assessment provenance" },
   { key: "infrastructure", label: "Infrastructure", hint: "Registry metadata" },
   { key: "simulation", label: "Simulation", hint: "Constraint audit" },
+  { key: "evidence", label: "Evidence", hint: "Ground truth and provenance" },
 ];
 
 const REVIEW_ACTIONS: { status: string; label: string }[] = [
@@ -696,7 +699,7 @@ export function PilotWorkspace() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
-            Phase 10 · Governance workspace
+            Phase 11 · Evidence and governance workspace
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
             Controlled pilot readiness
@@ -2713,7 +2716,7 @@ export function PilotWorkspace() {
           </div>
         ) : null}
 
-
+        {tab === "evidence" ? <EvidenceWorkspace /> : null}
       </section>
     </main>
   );

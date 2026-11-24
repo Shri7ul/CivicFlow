@@ -4,6 +4,11 @@ This document records the Phase 8 dataset choice, ingestion/snapshot pipeline,
 leakage controls, actual results, reproducibility commands, API, security
 boundary, and limitations. Nothing here is a causal or predictive field claim.
 
+Phase 11 adds fresh Q3 2026 Brooklyn and Manhattan slices and a separate
+snapshot/provenance workspace without changing this Phase 8 protocol or its
+results. See [phase11.md](phase11.md) for the fresh external validation,
+reference-universe rules, real bridge integration and current readiness.
+
 ## Dataset selection
 
 Selected dataset: **NYC 311 Service Requests** from NYC Open Data / Socrata.

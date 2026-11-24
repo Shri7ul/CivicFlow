@@ -23,15 +23,17 @@ Last updated: 2026-11-25
 | Phase 7 — operational maturity | COMPLETE — committed as `e4a3ab6` | Migrations `0012`–`0015`, model governance/evaluation, provenance ingestion, freshness monitoring, alerts/notifications, human approvals, operations dashboard, live API + browser runs |
 | Phase 8 — real-world validation | COMPLETE — committed as `62c2e02` | Migration `0016`, NYC 311 snapshot + provenance, rolling-origin risk backtest vs 4 baselines, sensitivity, synthetic correlation/planning evidence, validation dashboard/report CLI, live API + browser runs |
 | Phase 9 — model diagnosis and external validation | COMPLETE — awaiting review | Migration `0017`, 4 multi-region snapshots, factor audit, 19-variant ablation, robustness suite, bootstrap/sign tests, pre-registered candidate evaluated on 3 holdouts and not activated, research report + `/validation` extension, live API + browser runs |
-| Phase 10 — research-to-operations readiness | COMPLETE — ready for review | Migrations `0018`/`0019`, controlled pilot lifecycle, human review, traceability/export, correlation review with explicit provenance, metadata registry, simulation audit, 15-category readiness gate, `/pilot` workspace, live API/browser checks |
+| Phase 10 — research-to-operations readiness | COMPLETE — committed | Migrations `0018`/`0019`, controlled pilot lifecycle, human review, traceability/export, correlation review with explicit provenance, metadata registry, simulation audit, readiness gate, `/pilot` workspace, live API/browser checks |
+| Phase 11 — real ground truth and urban data integration | COMPLETE — ready for review | Migrations `0020`–`0022`, hashed acquisition, 794 real NYC bridge assets, fresh Q3 2026 NYC 311 validation, ground-truth/reference-universe APIs, 16-category readiness, `/pilot` Evidence workspace, live RLS checks |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
 and pushed as `bfc073e` (`feat(civicflow): implement phase 4 incident
 intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
 `a9d6923`. Phase 7 is committed as `e4a3ab6`. Phase 8 is committed as `62c2e02`.
-Phase 9 is committed for review without rewriting prior history. Phase 10 is
-implemented and verified without activating a model or a pilot.
+Phase 9 is committed for review without rewriting prior history. Phase 10 was
+committed as `feat(civicflow): implement phase 10 readiness governance`.
+Phase 11 is implemented and verified without activating a model or a pilot.
 
 ## Phase 4 implementation checklist
 
@@ -787,7 +789,8 @@ Latest recorded results (Phase 10):
 
 ### Readiness, API, and frontend
 
-- [x] Added the 15-category scorecard (11 mandatory, 4 advisory), evidence
+- [x] Added the Phase 10 15-category scorecard (11 mandatory, 4 advisory; 16
+  categories from Phase 11), evidence
   attestations, blockers/owners, and `NOT_READY` / `CONDITIONALLY_READY` /
   `READY_FOR_CONTROLLED_PILOT` aggregation. No PASS or pilot activation is
   hardcoded.
@@ -834,6 +837,71 @@ Latest recorded results (Phase 10):
 - Correlation metrics are reviewer sample judgments; recall/F1 remain unknown
   without a complete reference universe, and true negatives are not fabricated.
 
+## Phase 11 implementation checklist
+
+### Acquisition and real data
+
+- [x] Audited Phase 8/9 research provenance, Phase 10 governance, live schema,
+  RLS, and APIs before changing behavior.
+- [x] Added source-key-only acquisition with exact allowlists, no redirects,
+  timeout/retry/byte/record limits, JSON validation and no client URLs.
+- [x] Added raw and normalized SHA-256, canonical metadata, schema/spatial
+  validation, duplicate/invalid/fallback counts, snapshots, lineage and
+  append-only events.
+- [x] Made failed acquisition non-destructive and successful acquisition
+  idempotent by source and normalized hash.
+- [x] Integrated NYC DOT Bridge Ratings `4yue-vjfc`: 794 unique BINs from 3,204
+  rows, EPSG:4326, quality `WARN`, independently recomputed hashes.
+- [x] Added automated metadata validation for the infrastructure source while
+  keeping physical-condition verification explicitly absent.
+- [x] Integrated fresh NYC 311 Brooklyn and Manhattan 2026 Q3 slices without
+  overwriting historical datasets.
+
+### Evidence, ground truth, correlation and validation
+
+- [x] Added ground-truth assertions with distinct source types, five required
+  statuses, creator/reviewer separation, evidence-required verification,
+  server identity and append-only events.
+- [x] Ensured review cannot alter original assertions or model scores and does
+  not serialize actor emails or raw bytes.
+- [x] Added immutable correlation reference universes with completeness
+  attestation, version/method/snapshot requirements, and null recall/F1/TN/FN
+  until prerequisites exist.
+- [x] Added Phase 11 external backtests with the registered Phase 9 config
+  unchanged; preserved both unfavorable results and `confidence_interval: null`
+  with an overlapping-fold explanation.
+- [x] Added descriptive 750 m bridge proximity context while keeping
+  infrastructure-aware comparison `NOT_ASSESSED`.
+- [x] Extended readiness to 16 categories (12 mandatory, 4 advisory); no PASS is
+  hardcoded and live state remains `NOT_READY`.
+
+### API, persistence, frontend and security
+
+- [x] Added five additive tables, infrastructure asset provenance/FKs/indexes,
+  explicit provenance columns, RLS staff policies and append-only triggers.
+- [x] Added strict request schemas that reject identity, status, hash, reviewer
+  and provenance spoofing; added bounded pagination.
+- [x] Added the `/pilot` Evidence tab with registry, snapshots, ground truth,
+  correlation, infrastructure, external results, blockers, loading/error/empty
+  and responsive provenance-aware rendering.
+- [x] Verified live RLS enabled on all five tables, worker visibility, anonymous
+  denial, and append-only update/delete rejection.
+- [x] Added backend and frontend tests, preserving all prior tests.
+
+### Verification and honest limitations
+
+- [x] Backend: **231 passed**; frontend: **86 tests / 26 files**; typecheck,
+  ESLint and production build passed.
+- [x] Live migrations through `0022_snapshot_provenance`; real data acquisition
+  and independent recomputation performed.
+- [x] No model activation, weight change, pilot approval, dispatch, alert,
+  resource allocation or authoritative civic decision occurred.
+- [x] No operational ground truth, complete correlation universe or independent
+  correlation labels exist; these remain hard blockers.
+- [x] Only bridges are integrated (1/7 domains); the other domains are absent.
+- [x] CivicFlow beat the strongest baseline on 0/2 fresh slices and 0/6 total;
+  no superiority claim is made.
+
 ## Known boundaries
 
 - Public self-service `/auth/v1/signup` returned HTTP 429 because the Supabase
@@ -853,8 +921,10 @@ Latest recorded results (Phase 10):
 - Infrastructure proximity is a spatial association, and dependency paths are
   inferred graph associations, not observed damage/outage or a calibrated
   cascade prediction.
-- The repository has no authoritative municipal asset feed; infrastructure rows
-  are development seed data unless a deployment loads its own dataset.
+- Phase 11 integrates real NYC DOT bridge ratings, but the other six
+  infrastructure domains still have no authoritative asset feed; remaining
+  infrastructure rows are development seed data unless a deployment loads its
+  own dataset.
 - Risk is decision support, not prediction or confirmed impact. H3 cells are
   analysis units, and sparse or incompletely covered history can suppress trends.
 - Minimum-count suppression applies to total cell counts; severity/category
@@ -876,8 +946,8 @@ Latest recorded results (Phase 10):
   heuristic category/severity mapping limit external validity.
 - The slice is dense (86 H3-9 cells at the first origin); top-k metrics and ROC
   must not be generalized to sparse data or operational decisions.
-- CivicFlow underperformed the strongest baseline on the reported slice; no
-  superiority claim is made.
+- CivicFlow underperformed the strongest baseline on the reported Phase 8/9 and
+  fresh Phase 11 slices (0/6 total); no superiority claim is made.
 - Duplicate-correlation metrics are hand-labelled synthetic fixtures. Planning
   reductions and availability are synthetic assumptions.
 - Phase 5 is committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7

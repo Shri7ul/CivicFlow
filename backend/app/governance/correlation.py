@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AuthenticatedUser
 from app.governance.errors import GovernanceError
-from app.models.enums import CorrelationDecision, Role
+from app.models.enums import CorrelationDecision, ProvenanceKind, Role
+from app.models.evidence import CorrelationUniverse
 from app.models.incident import Incident
 from app.models.pilot import CorrelationCandidate, CorrelationReview
 from app.models.profile import Profile
@@ -88,6 +89,54 @@ def create_candidate(
             "reference_note is required for a complete reference universe",
             code="reference_note_required",
         )
+    universe = session.scalar(
+        select(CorrelationUniverse).where(
+            CorrelationUniverse.universe_key == universe_key
+        )
+    )
+    if universe is not None:
+        if universe.candidate_method != method or universe.candidate_method_version != method_version:
+            raise GovernanceError(
+                "Candidate method/version does not match its attested universe",
+                status_code=409,
+                code="universe_method_mismatch",
+            )
+        if universe.reference_complete != reference_complete:
+            raise GovernanceError(
+                "reference_complete does not match the attested universe",
+                status_code=409,
+                code="universe_reference_mismatch",
+            )
+        if universe.reference_size != reference_size:
+            raise GovernanceError(
+                "reference_universe_size does not match the attested universe",
+                status_code=409,
+                code="universe_reference_mismatch",
+            )
+        if (universe.reference_note or None) != (reference_note or None):
+            raise GovernanceError(
+                "reference_note does not match the attested universe",
+                status_code=409,
+                code="universe_reference_mismatch",
+            )
+        if universe.provenance_kind == ProvenanceKind.SYNTHETIC and not synthetic_fixture:
+            raise GovernanceError(
+                "A synthetic universe requires synthetic_fixture=true",
+                status_code=422,
+                code="universe_provenance_mismatch",
+            )
+        if universe.provenance_kind == ProvenanceKind.OPERATIONAL and synthetic_fixture:
+            raise GovernanceError(
+                "An operational universe requires synthetic_fixture=false",
+                status_code=422,
+                code="universe_provenance_mismatch",
+            )
+        if universe.provenance_kind in {ProvenanceKind.MIXED, ProvenanceKind.UNKNOWN}:
+            raise GovernanceError(
+                "Candidates require an explicit SYNTHETIC or OPERATIONAL universe",
+                status_code=422,
+                code="universe_provenance_indeterminate",
+            )
     candidate = CorrelationCandidate(
         candidate_key=f"cc-{uuid.uuid4().hex[:16]}",
         source_incident_id=source_id,
@@ -191,11 +240,19 @@ def metrics_for_universe(session: Session, universe_key: str) -> dict:
     labelled = 0
     pair_total = 0
     pair_agree = 0
+    review_pairs: dict[tuple[str, str], list[tuple[str, str]]] = defaultdict(list)
     by_reviewer: Counter[str] = Counter()
     for candidate in candidates:
         reviews = grouped.get(candidate.id, [])
         for review in reviews:
             by_reviewer[review.reviewer_email or str(review.reviewer_id)] += 1
+        ordered = sorted(reviews, key=lambda review: str(review.reviewer_id))
+        for index, first in enumerate(ordered):
+            for second in ordered[index + 1 :]:
+                first_id = str(first.reviewer_id)
+                second_id = str(second.reviewer_id)
+                key = (first_id, second_id)
+                review_pairs[key].append((first.decision.value, second.decision.value))
         if not reviews:
             unreviewed += 1
             continue
@@ -222,20 +279,40 @@ def metrics_for_universe(session: Session, universe_key: str) -> dict:
     precision = None
     if true_positive + false_positive > 0:
         precision = round(true_positive / (true_positive + false_positive), 6)
+    universe = session.scalar(
+        select(CorrelationUniverse).where(
+            CorrelationUniverse.universe_key == universe_key
+        )
+    )
     sizes = {
         item.reference_universe_size
         for item in candidates
         if item.reference_universe_size is not None
     }
     reference_size_value = sizes.pop() if len(sizes) == 1 else None
-    complete = bool(candidates) and all(
-        item.universe_reference_complete for item in candidates
-    )
+    universe_mismatch = False
+    if universe is not None:
+        reference_size_value = universe.reference_size
+        universe_mismatch = any(
+            item.universe_reference_complete != universe.reference_complete
+            or item.reference_universe_size != universe.reference_size
+            or item.method != universe.candidate_method
+            or item.method_version != universe.candidate_method_version
+            for item in candidates
+        )
+        complete = universe.reference_complete and bool(candidates) and not universe_mismatch
+    else:
+        complete = False
     recall = None
     recall_reason = (
         "Recall is not computed because the candidate universe is not attested "
         "as a complete reference set with an external true-duplicate count."
     )
+    if universe is None:
+        recall_reason = (
+            "Recall is not computed because no registered reference universe "
+            "attestation exists; candidate-level flags are not sufficient."
+        )
     false_negative = None
     true_negative = None
     if (
@@ -259,6 +336,40 @@ def metrics_for_universe(session: Session, universe_key: str) -> dict:
     if precision is not None and recall is not None and precision + recall > 0:
         f1 = round(2 * precision * recall / (precision + recall), 6)
     agreement = round(pair_agree / pair_total, 6) if pair_total else None
+
+    def _cohens_kappa(pairs: list[tuple[str, str]]) -> tuple[float | None, str]:
+        if len(pairs) < 2:
+            return None, "At least two co-reviewed candidates are required."
+        observed = sum(1 for first, second in pairs if first == second) / len(pairs)
+        categories = sorted({value for pair in pairs for value in pair})
+        expected = 0.0
+        for category in categories:
+            first_rate = sum(1 for first, _ in pairs if first == category) / len(pairs)
+            second_rate = sum(1 for _, second in pairs if second == category) / len(pairs)
+            expected += first_rate * second_rate
+        if expected >= 1:
+            return None, "Expected agreement is 1; kappa is undefined."
+        return round((observed - expected) / (1 - expected), 6), (
+            "Cohen's kappa uses independent reviewer labels on the same candidates; "
+            "it is not adjusted for prevalence or clustering."
+        )
+
+    kappa_values: list[dict] = []
+    for pair, decisions in review_pairs.items():
+        value, reason = _cohens_kappa(decisions)
+        kappa_values.append(
+            {
+                "reviewers": list(pair),
+                "co_reviewed_candidates": len(decisions),
+                "cohens_kappa": value,
+                "reason": reason,
+            }
+        )
+    single_kappa = (
+        kappa_values[0]["cohens_kappa"]
+        if len(kappa_values) == 1 and kappa_values[0]["cohens_kappa"] is not None
+        else None
+    )
     provenance_flags = {item.synthetic_fixture for item in candidates}
     if not provenance_flags or None in provenance_flags:
         is_simulated: bool | None = None
@@ -307,10 +418,28 @@ def metrics_for_universe(session: Session, universe_key: str) -> dict:
             "multi_review_candidates": sum(
                 1 for reviews in grouped.values() if len(reviews) >= 2
             ),
+            "cohens_kappa": single_kappa,
+            "kappa_by_pair": kappa_values,
+            "kappa_assumptions": (
+                "Kappa is reported only when one reviewer pair co-reviewed at least "
+                "two candidates. Labels are treated as independent; no adjustment "
+                "for prevalence, clustering or sampling is applied."
+            ),
         },
         "reference": {
             "complete": complete,
             "reference_universe_size": reference_size_value,
+            "attested_universe_key": universe.universe_key if universe else None,
+            "attested_universe_version": universe.version if universe else None,
+            "attested_provenance": (
+                universe.provenance_kind.value if universe else None
+            ),
+            "reference_dataset_snapshot_id": (
+                str(universe.reference_dataset_snapshot_id)
+                if universe and universe.reference_dataset_snapshot_id
+                else None
+            ),
+            "universe_mismatch": universe_mismatch,
             "recall_reason": recall_reason,
         },
         "limitations": [
@@ -320,6 +449,7 @@ def metrics_for_universe(session: Session, universe_key: str) -> dict:
             "Synthetic fixtures are never reported as empirical performance.",
             "Synthetic provenance is declared per candidate; unknown or mixed universes are not treated as operational.",
             "Reviewer labels are human judgments about this sample, not confirmed ground truth.",
+            "Kappa is not reported across multiple reviewer pairs; agreement on different candidate subsets is not pooled.",
         ],
         "is_simulated": is_simulated,
         "synthetic_provenance": synthetic_provenance,

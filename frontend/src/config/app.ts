@@ -4,6 +4,6 @@ export const siteConfig = {
   tagline: "Urban Impact & Response Intelligence",
   description:
     "Report civic incidents, coordinate response, inspect explainable H3 risk, and govern operations from one secure workspace.",
-  version: "0.10.0",
-  phase: "Phase 10",
+  version: "0.11.0",
+  phase: "Phase 11",
 } as const;
