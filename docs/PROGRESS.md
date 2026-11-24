@@ -25,6 +25,7 @@ Last updated: 2026-11-25
 | Phase 9 — model diagnosis and external validation | COMPLETE — awaiting review | Migration `0017`, 4 multi-region snapshots, factor audit, 19-variant ablation, robustness suite, bootstrap/sign tests, pre-registered candidate evaluated on 3 holdouts and not activated, research report + `/validation` extension, live API + browser runs |
 | Phase 10 — research-to-operations readiness | COMPLETE — committed | Migrations `0018`/`0019`, controlled pilot lifecycle, human review, traceability/export, correlation review with explicit provenance, metadata registry, simulation audit, readiness gate, `/pilot` workspace, live API/browser checks |
 | Phase 11 — real ground truth and urban data integration | COMPLETE — ready for review | Migrations `0020`–`0022`, hashed acquisition, 794 real NYC bridge assets, fresh Q3 2026 NYC 311 validation, ground-truth/reference-universe APIs, 16-category readiness, `/pilot` Evidence workspace, live RLS checks |
+| Phase 12 — Dhaka localization and pilot preparation | IMPLEMENTED — pilot BLOCKED | Migration `0023`, central `US-NYC`/`BD-DHAKA` registry, geography-scoped workspace APIs, one real bounded Dhaka OSM research acquisition (511 features), Dhaka readiness view, field/correlation/validation protocols, pilot SOP, 8 development docs; no pilot or model activation |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
@@ -34,6 +35,13 @@ intelligence`). Phase 5 is committed as `640f173`; Phase 6 is committed as
 Phase 9 is committed for review without rewriting prior history. Phase 10 was
 committed as `feat(civicflow): implement phase 10 readiness governance`.
 Phase 11 is implemented and verified without activating a model or a pilot.
+Phase 12 added Dhaka localization without rewriting NYC history. Its detailed
+audit, source research, protocols and implementation report are in
+`docs/development/PHASE_12_*.md`. Dhaka readiness is `NOT_READY`; the pilot area
+selection, authoritative sources, ground truth, correlation labels and external
+validation remain BLOCKED. The live database was only inspected read-only and
+remains at migration head `0022_snapshot_provenance`; `0023` is a local additive
+migration pending deployment approval.
 
 ## Phase 4 implementation checklist
 

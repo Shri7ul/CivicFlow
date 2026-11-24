@@ -55,6 +55,9 @@ class ValidationDataset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source_url: Mapped[str] = mapped_column(String(1000), nullable=False)
     license_note: Mapped[str] = mapped_column(Text, nullable=False)
     region: Mapped[str] = mapped_column(String(200), nullable=False)
+    geographic_context_key: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
+    )
     period_start: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

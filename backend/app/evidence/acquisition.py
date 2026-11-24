@@ -14,6 +14,7 @@ import math
 import time
 import uuid
 from dataclasses import dataclass
+from urllib.parse import quote
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -22,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AuthenticatedUser
+from app.geo.contexts import BD_DHAKA, DHAKA_OSM_RESEARCH_CELL
 from app.governance.errors import GovernanceError
 from app.models.enums import (
     AssetType,
@@ -62,9 +64,69 @@ class SourceDefinition:
     crs: str
     update_frequency: str
     known_limitations: str
+    # Geography and normalizer identity. Defaults preserve the historical NYC
+    # bridge definition exactly; new sources must declare them explicitly.
+    geographic_context_key: str = "US-NYC"
+    normalization_kind: str = "nyc_bridges"
+    display_name: str = "NYC DOT Bridge Ratings"
+    category: str = "BRIDGES"
+    access_method: str = "Socrata HTTPS JSON"
+    source_id: str = "4yue-vjfc"
+    dataset_version_prefix: str = "4yue-vjfc"
 
+
+# Pinned, read-only OpenStreetMap Overpass query for a small central-Dhaka
+# research cell. This is infrastructure *context*, not authoritative civic
+# infrastructure and never an operational incident or verified ground truth.
+_OSM_S, _OSM_W, _OSM_N, _OSM_E = DHAKA_OSM_RESEARCH_CELL.as_latlon()
+DHAKA_OSM_QUERY = (
+    "[out:json][timeout:25][maxsize:8000000];"
+    f"(way[highway]({_OSM_S},{_OSM_W},{_OSM_N},{_OSM_E});"
+    f"way[bridge]({_OSM_S},{_OSM_W},{_OSM_N},{_OSM_E});"
+    f"way[waterway]({_OSM_S},{_OSM_W},{_OSM_N},{_OSM_E}););"
+    "out geom;"
+)
+DHAKA_OSM_SOURCE = "dhaka-osm-context-v1"
+DHAKA_OSM_URL = (
+    "https://overpass-api.de/api/interpreter?data=" + quote(DHAKA_OSM_QUERY, safe="")
+)
+DHAKA_OSM_LICENSE = (
+    "© OpenStreetMap contributors, available under the Open Database License "
+    "(ODbL 1.0): https://www.openstreetmap.org/copyright. Retrieved through "
+    "the public Overpass API (https://overpass-api.de/) under its usage "
+    "policy. Attribution is mandatory. OSM is community-mapped context: it is "
+    "not an authoritative DNCC/DSCC/RAJUK/WASA asset register, has no "
+    "guaranteed completeness or update frequency, and is not field-verified."
+)
 
 SOURCES: dict[str, SourceDefinition] = {
+    DHAKA_OSM_SOURCE: SourceDefinition(
+        source_key=DHAKA_OSM_SOURCE,
+        kind=EvidenceSnapshotKind.INFRASTRUCTURE,
+        url=DHAKA_OSM_URL,
+        provider="OpenStreetMap contributors (via Overpass API)",
+        license_note=DHAKA_OSM_LICENSE,
+        schema_version="osm-overpass-dhaka-context-v1",
+        geographic_coverage=(
+            f"Central Dhaka research cell, bbox {DHAKA_OSM_RESEARCH_CELL.as_geojson()} "
+            "(GeoJSON west,south,east,north). Not an administrative boundary."
+        ),
+        crs="EPSG:4326 (OSM/Overpass WGS84 geometry)",
+        update_frequency="Community-mapped; no guaranteed refresh interval",
+        known_limitations=(
+            "Bounded to a small central-Dhaka research cell. Community mapping "
+            "quality and completeness are unverified. Records are map features "
+            "used for infrastructure context only, never verified field assets, "
+            "incidents, complaints, dispatch targets or safety claims."
+        ),
+        geographic_context_key=BD_DHAKA.key,
+        normalization_kind="osm_context",
+        display_name="Dhaka OSM infrastructure context (research cell)",
+        category="OSM_CONTEXT",
+        access_method="Pinned Overpass interpreter GET; redirects disabled",
+        source_id="overpass-dhaka-context-v1",
+        dataset_version_prefix="osm-dhaka-research-cell",
+    ),
     NYC_BRIDGE_SOURCE: SourceDefinition(
         source_key=NYC_BRIDGE_SOURCE,
         kind=EvidenceSnapshotKind.INFRASTRUCTURE,
@@ -403,21 +465,22 @@ def _get_or_create_source(
     if source is None:
         source = InfrastructureSource(
             source_key=definition.source_key,
-            name="NYC DOT Bridge Ratings",
-            category="BRIDGES",
+            name=definition.display_name,
+            category=definition.category,
             source_url=definition.url,
             provider=definition.provider,
             license_note=definition.license_note,
             retrieved_at=retrieved_at,
-            dataset_version=f"4yue-vjfc@{retrieved_at.date().isoformat()}",
+            dataset_version=f"{definition.dataset_version_prefix}@{retrieved_at.date().isoformat()}",
             geographic_coverage=definition.geographic_coverage,
             crs=definition.crs,
             schema_version=definition.schema_version,
             update_frequency=definition.update_frequency,
             known_limitations=definition.known_limitations,
             details={
-                "access_method": "Socrata HTTPS JSON",
-                "source_id": "4yue-vjfc",
+                "access_method": definition.access_method,
+                "source_id": definition.source_id,
+                "geographic_context_key": definition.geographic_context_key,
                 "acquisition": "allowlisted, bounded, no redirects",
             },
             created_by=actor.profile.id if actor else None,
@@ -469,9 +532,10 @@ def record_failure(
         source_url=definition.url,
         provider=definition.provider,
         license_note=definition.license_note,
-        dataset_version=f"4yue-vjfc@{retrieved_at.date().isoformat()}",
+        dataset_version=f"{definition.dataset_version_prefix}@{retrieved_at.date().isoformat()}",
         retrieved_at=retrieved_at,
         schema_version=definition.schema_version,
+        geographic_context_key=definition.geographic_context_key,
         failure_reason=reason[:2000],
         quality_status=EvidenceQualityStatus.UNKNOWN,
         quality_checks=[{"check": "acquisition", "status": "FAIL", "detail": reason[:500]}],
@@ -510,6 +574,12 @@ def acquire_infrastructure_source(
             code="source_not_found",
         )
     retrieved_at = _utc_now()
+    if definition.normalization_kind == "osm_context":
+        from app.evidence.dhaka_osm import acquire_dhaka_osm_context
+
+        return acquire_dhaka_osm_context(
+            session, definition, actor, fetcher=fetcher, retrieved_at=retrieved_at
+        )
     try:
         raw = (fetcher or fetch_source_bytes)(definition.url)
     except AcquisitionError as error:
@@ -550,8 +620,9 @@ def acquire_infrastructure_source(
         source_url=definition.url,
         provider=definition.provider,
         license_note=definition.license_note,
-        dataset_version=f"4yue-vjfc@{retrieved_at.date().isoformat()}",
+        dataset_version=f"{definition.dataset_version_prefix}@{retrieved_at.date().isoformat()}",
         retrieved_at=retrieved_at,
+        geographic_context_key=definition.geographic_context_key,
         snapshot_sha256=normalized_hash,
         raw_sha256=raw_hash,
         schema_version=definition.schema_version,
@@ -688,7 +759,7 @@ def acquire_infrastructure_source(
 
     source.retrieved_at = retrieved_at
     source.snapshot_sha256 = normalized_hash
-    source.dataset_version = f"4yue-vjfc@{retrieved_at.date().isoformat()}"
+    source.dataset_version = f"{definition.dataset_version_prefix}@{retrieved_at.date().isoformat()}"
     source.details = {
         **source.details,
         "latest_snapshot_id": str(snapshot.id),

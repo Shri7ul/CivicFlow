@@ -308,6 +308,15 @@ def freshness_days(snapshot: EvidenceSnapshot) -> int | None:
     return (datetime.now(timezone.utc) - aware).days
 
 
+def _is_osm_research_context(snapshot: EvidenceSnapshot) -> bool:
+    """Public OSM context is real acquired data, never operational evidence."""
+
+    return (
+        snapshot.geographic_context_key == "BD-DHAKA"
+        and snapshot.source_key.startswith("dhaka-osm")
+    )
+
+
 def serialize_snapshot(snapshot: EvidenceSnapshot, *, detail: bool = False) -> dict:
     payload = {
         "id": str(snapshot.id),
@@ -339,6 +348,7 @@ def serialize_snapshot(snapshot: EvidenceSnapshot, *, detail: bool = False) -> d
             snapshot.data_period_end.isoformat() if snapshot.data_period_end else None
         ),
         "geographic_coverage": snapshot.geographic_coverage,
+        "geographic_context_key": snapshot.geographic_context_key or "UNKNOWN",
         "quality_status": snapshot.quality_status.value,
         "quality_checks": snapshot.quality_checks or [],
         "lineage": snapshot.lineage or {},
@@ -364,19 +374,29 @@ def serialize_snapshot(snapshot: EvidenceSnapshot, *, detail: bool = False) -> d
         "created_by": str(snapshot.created_by) if snapshot.created_by else None,
         "created_at": snapshot.created_at.isoformat(),
         "provenance": (
-            "REAL"
+            "PUBLIC_OSM_RESEARCH"
+            if _is_osm_research_context(snapshot)
+            else "REAL"
             if snapshot.provenance_kind.value == "OPERATIONAL"
             else snapshot.provenance_kind.value
         ),
         "provenance_kind": snapshot.provenance_kind.value,
         "readiness": (
-            "REAL_ACQUIRED"
+            "RESEARCH_CONTEXT_ONLY"
+            if _is_osm_research_context(snapshot)
+            else "REAL_ACQUIRED"
             if snapshot.status == EvidenceSnapshotStatus.VALIDATED
             and snapshot.quality_status.value != "FAIL"
             and snapshot.provenance_kind.value == "OPERATIONAL"
             else "NOT_OPERATIONAL_EVIDENCE"
         ),
         "disclaimer": (
+            "OpenStreetMap research context is community-mapped, not authoritative "
+            "infrastructure, not field-verified and never operational evidence. "
+            if _is_osm_research_context(snapshot)
+            else ""
+        )
+        + (
             "Snapshot integrity is not operational validation. Acquired bytes are "
             "provided by the named source; CivicFlow did not independently inspect "
             "the physical asset."

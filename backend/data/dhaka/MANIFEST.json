@@ -1,0 +1,32 @@
+{
+  "authoritative": false,
+  "bbox_geojson": [
+    90.3900972,
+    23.7800041,
+    90.4099607,
+    23.7999428
+  ],
+  "data_class": "PUBLIC_OSM_RESEARCH_CONTEXT",
+  "dataset_key": "dhaka-osm-context-v1",
+  "disclaimer": "Community-mapped research context only; not authoritative infrastructure, not operational evidence, not human-verified.",
+  "field_verified": false,
+  "geographic_context_key": "BD-DHAKA",
+  "license_note": "\u00a9 OpenStreetMap contributors, available under the Open Database License (ODbL 1.0): https://www.openstreetmap.org/copyright. Retrieved through the public Overpass API (https://overpass-api.de/) under its usage policy. Attribution is mandatory. OSM is community-mapped context: it is not an authoritative DNCC/DSCC/RAJUK/WASA asset register, has no guaranteed completeness or update frequency, and is not field-verified.",
+  "normalized_record_count": 511,
+  "normalized_sha256": "7b49ff62ab6eaa3a90c87d3a993027ba82033dab1de8b4970f8cbf4de2f50453",
+  "osm_base_timestamp": "2026-11-24T23:13:20Z",
+  "quality_status": "WARN",
+  "raw_bytes": 447201,
+  "raw_record_count": 552,
+  "raw_sha256": "928c6d919b96f195eb9e6de03f2fbbfe02296878db4c29683161d7a07f281d73",
+  "rejected_count": 41,
+  "research_cell_geojson": [
+    90.39,
+    23.78,
+    90.41,
+    23.8
+  ],
+  "retrieved_at": "2026-11-24T23:15:09.235527+00:00",
+  "snapshot_file": "dhaka_osm_context_20261124T231509Z.json.gz",
+  "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A25%5D%5Bmaxsize%3A8000000%5D%3B%28way%5Bhighway%5D%2823.78%2C90.39%2C23.8%2C90.41%29%3Bway%5Bbridge%5D%2823.78%2C90.39%2C23.8%2C90.41%29%3Bway%5Bwaterway%5D%2823.78%2C90.39%2C23.8%2C90.41%29%3B%29%3Bout%20geom%3B"
+}

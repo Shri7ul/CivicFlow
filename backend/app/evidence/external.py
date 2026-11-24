@@ -311,6 +311,7 @@ def acquire_external_dataset(
         source_url=spec.source_url,
         license_note=spec.license_note,
         region=spec.region,
+        geographic_context_key="US-NYC",
         period_start=spec.period_start,
         period_end=spec.period_end,
         source_id=source.id,
@@ -356,6 +357,7 @@ def acquire_external_dataset(
     snapshot = EvidenceSnapshot(
         snapshot_key=f"{spec.dataset_key}-{digest[:12]}",
         kind=EvidenceSnapshotKind.RESEARCH_DATASET,
+        geographic_context_key="US-NYC",
         status=(
             EvidenceSnapshotStatus.VALIDATED
             if quality != EvidenceQualityStatus.FAIL

@@ -8,6 +8,7 @@ from app.models.audit import RoleChangeAudit
 from app.models.base import Base
 from app.models.cluster import IncidentCluster, IncidentClusterMember
 from app.models.department import Department
+from app.models.geo import GeographicContextRecord
 from app.models.enums import (
     SourceStatus,
     SourceReliability,
@@ -123,6 +124,7 @@ from app.models.operations import (
 )
 
 __all__ = [
+    "GeographicContextRecord",
     "CorrelationCandidate",
     "CorrelationDecision",
     "CorrelationReview",

@@ -1,13 +1,19 @@
 import type { Feature, FeatureCollection, Point } from "geojson";
 
+import {
+  DEFAULT_GEOGRAPHIC_CONTEXT,
+  mapViewForContext,
+} from "@/config/geography";
 import { categoryLabels } from "@/lib/incidents";
 import type { Incident, IncidentCategory } from "@/types/incidents";
 
-export const DEFAULT_MAP_VIEW = {
-  longitude: 90.4125,
-  latitude: 23.8103,
-  zoom: 11.5,
-} as const;
+export const DEFAULT_MAP_VIEW = mapViewForContext(
+  DEFAULT_GEOGRAPHIC_CONTEXT,
+) as {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+};
 
 export const MIN_MAP_ZOOM = 8;
 export const MAX_MAP_ZOOM = 19;

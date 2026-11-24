@@ -271,6 +271,23 @@ current status, verification evidence, and known boundaries.
   acquisition controls, review workflow, external methodology, API, RLS,
   verification and limitations.
 
+### Phase 12 — Dhaka localization and controlled pilot preparation
+
+- Added a central geographic context registry (`US-NYC` research and
+  `BD-DHAKA` research/pilot candidate), migration `0023_phase12_geography`,
+  geography-scoped evidence APIs, a Dhaka readiness view and `/pilot` geographic
+  panel. NYC historical datasets, hashes and results are unchanged.
+- One real bounded Dhaka OSM research-cell acquisition was verified (511
+  features, hashes in `backend/data/dhaka/MANIFEST.json`). OSM is community-mapped
+  context, never authoritative or field-verified infrastructure.
+- Dhaka readiness is `NOT_READY`; pilot area selection, authoritative sources,
+  ground truth, correlation labels, validation and stakeholder approval remain
+  BLOCKED. No pilot or model activation occurred. The live database remains at
+  `0022_snapshot_provenance`; migration `0023` is local and pending deployment
+  approval.
+- See [docs/development/PHASE_12_IMPLEMENTATION_REPORT.md](docs/development/PHASE_12_IMPLEMENTATION_REPORT.md)
+  and the other `docs/development/PHASE_12_*.md` documents.
+
 ### Phase 7 — operational maturity and intelligence validation
 
 - Model registry and activation events with full configuration and stable

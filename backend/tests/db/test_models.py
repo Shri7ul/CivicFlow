@@ -77,6 +77,7 @@ EXPECTED_TABLES = {
     "ground_truth_records",
     "ground_truth_events",
     "correlation_universes",
+    "geographic_contexts",
 }
 
 

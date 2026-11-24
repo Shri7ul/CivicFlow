@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import AuthenticatedUser, require_admin, require_worker
 from app.core.exceptions import AppError
 from app.db.session import get_db_session
+from app.geo.contexts import assert_context_known
 from app.evidence.acquisition import AcquisitionError, acquire_infrastructure_source
 from app.evidence.ground_truth import (
     create_record,
@@ -79,9 +80,21 @@ def evidence_workspace(
     user: Annotated[AuthenticatedUser, Depends(require_worker)],
     session: Annotated[Session, Depends(get_db_session)],
     include_context: bool = True,
+    geographic_context: str | None = None,
 ) -> dict:
     del user
-    return build_workspace(session, include_context=include_context)
+    if geographic_context is not None:
+        try:
+            geographic_context = assert_context_known(geographic_context)
+        except ValueError as error:
+            raise AppError(
+                str(error), status_code=422, code="unknown_geographic_context"
+            ) from error
+    return build_workspace(
+        session,
+        include_context=include_context,
+        geographic_context_key=geographic_context,
+    )
 
 
 @router.get("/evidence/snapshots")

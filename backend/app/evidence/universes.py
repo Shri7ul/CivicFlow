@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AuthenticatedUser
+from app.geo.contexts import UNKNOWN_CONTEXT_KEY
 from app.governance.errors import GovernanceError
 from app.models.enums import EvidenceSnapshotStatus, ProvenanceKind
 from app.models.evidence import CorrelationUniverse, EvidenceSnapshot
@@ -49,6 +50,7 @@ def create_universe(
             status_code=422,
             code="mixed_provenance_unsupported",
         )
+    snapshot = None
     if payload.reference_dataset_snapshot_id is not None:
         snapshot = session.get(EvidenceSnapshot, payload.reference_dataset_snapshot_id)
         if snapshot is None:
@@ -69,6 +71,9 @@ def create_universe(
         description=payload.description,
         version=payload.version,
         provenance_kind=payload.provenance_kind,
+        geographic_context_key=(
+            snapshot.geographic_context_key if snapshot is not None else UNKNOWN_CONTEXT_KEY
+        ),
         reference_complete=payload.reference_complete,
         reference_size=payload.reference_size,
         reference_note=payload.reference_note,

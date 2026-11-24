@@ -13,7 +13,7 @@ import statistics
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import false, func, select
 from sqlalchemy.orm import Session
 
 from app.evidence.ground_truth import serialize_record, status_counts
@@ -283,10 +283,36 @@ def external_results(session: Session, limit: int = 6) -> list[dict]:
     return results
 
 
-def build_workspace(session: Session, *, include_context: bool = True) -> dict:
-    datasets = session.scalars(
-        select(ValidationDataset).order_by(ValidationDataset.created_at.desc()).limit(20)
-    ).all()
+def build_workspace(
+    session: Session,
+    *,
+    include_context: bool = True,
+    geographic_context_key: str | None = None,
+) -> dict:
+    """Build the evidence workspace, optionally scoped to one geographic context.
+
+    Server-side scoping is mandatory for context-aware views: a Dhaka workspace
+    must not contain NYC research datasets, snapshots, reviews or bridge assets.
+    """
+
+    snapshot_context_filter = (
+        [EvidenceSnapshot.geographic_context_key == geographic_context_key]
+        if geographic_context_key
+        else []
+    )
+    universe_context_filter = (
+        [CorrelationUniverse.geographic_context_key == geographic_context_key]
+        if geographic_context_key
+        else []
+    )
+    datasets_query = select(ValidationDataset).order_by(
+        ValidationDataset.created_at.desc()
+    )
+    if geographic_context_key:
+        datasets_query = datasets_query.where(
+            ValidationDataset.geographic_context_key == geographic_context_key
+        )
+    datasets = session.scalars(datasets_query.limit(20)).all()
     registry = []
     for dataset in datasets:
         snapshot = _dataset_snapshot(session, dataset.id)
@@ -327,16 +353,19 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
             }
         )
 
-    snapshots = session.scalars(
-        select(EvidenceSnapshot)
-        .order_by(EvidenceSnapshot.retrieved_at.desc())
-        .limit(12)
-    ).all()
-    current = session.scalars(
-        select(EvidenceSnapshot)
-        .where(EvidenceSnapshot.is_current.is_(True))
-        .limit(500)
-    ).all()
+    snapshots_query = select(EvidenceSnapshot).order_by(
+        EvidenceSnapshot.retrieved_at.desc()
+    )
+    current_query = select(EvidenceSnapshot).where(EvidenceSnapshot.is_current.is_(True))
+    if geographic_context_key:
+        snapshots_query = snapshots_query.where(
+            EvidenceSnapshot.geographic_context_key == geographic_context_key
+        )
+        current_query = current_query.where(
+            EvidenceSnapshot.geographic_context_key == geographic_context_key
+        )
+    snapshots = session.scalars(snapshots_query.limit(12)).all()
+    current = session.scalars(current_query.limit(500)).all()
     quality_counts = {value.value: 0 for value in EvidenceQualityStatus}
     provenance_counts = {value.value: 0 for value in ProvenanceKind}
     for snapshot in current:
@@ -355,14 +384,23 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
                     }
                 )
 
-    gt_counts = status_counts(session)
+    gt_context_filter = (
+        [GroundTruthRecord.geographic_context_key == geographic_context_key]
+        if geographic_context_key
+        else []
+    )
+    gt_counts = status_counts(
+        session, geographic_context_key=geographic_context_key
+    )
     gt_total = sum(gt_counts.values())
     gt_provenance = {value.value: 0 for value in ProvenanceKind}
     for provenance, count in session.execute(
         select(
             GroundTruthRecord.provenance_kind,
             func.count(GroundTruthRecord.id),
-        ).group_by(GroundTruthRecord.provenance_kind)
+        )
+        .where(*gt_context_filter)
+        .group_by(GroundTruthRecord.provenance_kind)
     ).all():
         gt_provenance[provenance.value] = int(count)
     operational_verified = int(
@@ -372,6 +410,7 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
             .where(
                 GroundTruthRecord.provenance_kind == ProvenanceKind.OPERATIONAL,
                 GroundTruthRecord.status == GroundTruthStatus.VERIFIED,
+                *gt_context_filter,
             )
         )
         or 0
@@ -380,30 +419,56 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
         source.value: 0 for source in GroundTruthSourceType
     }
     for source_type, count in session.execute(
-        select(GroundTruthRecord.source_type, func.count(GroundTruthRecord.id)).group_by(
-            GroundTruthRecord.source_type
-        )
+        select(GroundTruthRecord.source_type, func.count(GroundTruthRecord.id))
+        .where(*gt_context_filter)
+        .group_by(GroundTruthRecord.source_type)
     ).all():
         gt_sources[source_type.value] = int(count)
-    recent_gt = session.scalars(
-        select(GroundTruthRecord).order_by(GroundTruthRecord.created_at.desc()).limit(5)
-    ).all()
+    recent_gt_query = select(GroundTruthRecord).order_by(
+        GroundTruthRecord.created_at.desc()
+    )
+    if geographic_context_key:
+        recent_gt_query = recent_gt_query.where(*gt_context_filter)
+    recent_gt = session.scalars(recent_gt_query.limit(5)).all()
 
-    universes = session.scalars(
-        select(CorrelationUniverse)
-        .order_by(CorrelationUniverse.created_at.desc())
-        .limit(6)
-    ).all()
-    universe_payload = []
-    total_candidates = int(
-        session.scalar(select(func.count()).select_from(CorrelationCandidate)) or 0
+    universes_query = select(CorrelationUniverse).order_by(
+        CorrelationUniverse.created_at.desc()
     )
-    reviewed_candidates = int(
-        session.scalar(
-            select(func.count(func.distinct(CorrelationReview.candidate_id)))
+    if geographic_context_key:
+        universes_query = universes_query.where(
+            CorrelationUniverse.geographic_context_key == geographic_context_key
         )
-        or 0
+    universes = session.scalars(universes_query.limit(6)).all()
+    universe_payload = []
+    candidate_count_statement = (
+        select(func.count())
+        .select_from(CorrelationCandidate)
+        .join(
+            CorrelationUniverse,
+            CorrelationCandidate.universe_key == CorrelationUniverse.universe_key,
+        )
     )
+    reviewed_count_statement = (
+        select(func.count(func.distinct(CorrelationReview.candidate_id)))
+        .select_from(CorrelationReview)
+        .join(
+            CorrelationCandidate,
+            CorrelationReview.candidate_id == CorrelationCandidate.id,
+        )
+        .join(
+            CorrelationUniverse,
+            CorrelationCandidate.universe_key == CorrelationUniverse.universe_key,
+        )
+    )
+    if geographic_context_key:
+        candidate_count_statement = candidate_count_statement.where(
+            *universe_context_filter
+        )
+        reviewed_count_statement = reviewed_count_statement.where(
+            *universe_context_filter
+        )
+    total_candidates = int(session.scalar(candidate_count_statement) or 0)
+    reviewed_candidates = int(session.scalar(reviewed_count_statement) or 0)
     for universe in universes[:6]:
         candidate_count = int(
             session.scalar(
@@ -438,11 +503,14 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
             }
         )
 
-    sources = session.scalars(
-        select(InfrastructureSource)
-        .order_by(InfrastructureSource.created_at.desc())
-        .limit(50)
-    ).all()
+    sources_query = select(InfrastructureSource).order_by(
+        InfrastructureSource.created_at.desc()
+    )
+    if geographic_context_key == "BD-DHAKA":
+        sources_query = sources_query.where(InfrastructureSource.source_key.like("dhaka%"))
+    elif geographic_context_key == "US-NYC":
+        sources_query = sources_query.where(InfrastructureSource.source_key.like("nyc%"))
+    sources = session.scalars(sources_query.limit(50)).all()
     source_payload = []
     integrated = 0
     for source in sources:
@@ -489,12 +557,19 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
                 "integrated": integrated_flag,
             }
         )
+    asset_statement = (
+        select(InfrastructureAsset.asset_type, func.count(InfrastructureAsset.id))
+        .where(InfrastructureAsset.is_active.is_(True))
+    )
+    if geographic_context_key:
+        source_ids = [source.id for source in sources]
+        asset_statement = asset_statement.where(
+            InfrastructureAsset.source_id.in_(source_ids) if source_ids else false()
+        )
     assets_by_type = {
         row[0].value: int(row[1])
         for row in session.execute(
-            select(InfrastructureAsset.asset_type, func.count(InfrastructureAsset.id))
-            .where(InfrastructureAsset.is_active.is_(True))
-            .group_by(InfrastructureAsset.asset_type)
+            asset_statement.group_by(InfrastructureAsset.asset_type)
         ).all()
     }
     verified_domains = sorted({source.category for source in sources if source.validation_status.value == "VERIFIED"})
@@ -512,33 +587,56 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
             }
         )
 
-    external = external_results(session)
+    # NYC research holdouts and bridge overlap are US-NYC only. A Dhaka-scoped
+    # workspace must never display them as local evidence or infrastructure.
+    nyc_research_allowed = geographic_context_key in (None, "US-NYC")
+    external = external_results(session) if nyc_research_allowed else []
     fresh_external = [
         item for item in external if item["classification"] == "FRESH_EXTERNAL_HOLDOUT"
     ]
-    context = infrastructure_context(session) if include_context else None
+    context = (
+        infrastructure_context(session)
+        if include_context and nyc_research_allowed
+        else None
+    )
 
-    snapshot_total = int(
-        session.scalar(select(func.count()).select_from(EvidenceSnapshot)) or 0
+    snapshot_count_statement = select(func.count()).select_from(EvidenceSnapshot)
+    current_count_statement = (
+        select(func.count())
+        .select_from(EvidenceSnapshot)
+        .where(EvidenceSnapshot.is_current.is_(True))
     )
-    current_total = int(
-        session.scalar(
-            select(func.count())
-            .select_from(EvidenceSnapshot)
-            .where(EvidenceSnapshot.is_current.is_(True))
+    validated_count_statement = (
+        select(func.count())
+        .select_from(EvidenceSnapshot)
+        .where(EvidenceSnapshot.status == EvidenceSnapshotStatus.VALIDATED)
+    )
+    if geographic_context_key:
+        snapshot_count_statement = snapshot_count_statement.where(
+            *snapshot_context_filter
         )
-        or 0
+        current_count_statement = current_count_statement.where(
+            *snapshot_context_filter
+        )
+        validated_count_statement = validated_count_statement.where(
+            *snapshot_context_filter
+        )
+    snapshot_total = int(session.scalar(snapshot_count_statement) or 0)
+    current_total = int(session.scalar(current_count_statement) or 0)
+    automated_statement = (
+        select(func.count())
+        .select_from(EvidenceSnapshot)
+        .where(
+            EvidenceSnapshot.verification_status
+            == SnapshotVerificationStatus.AUTOMATED_RECOMPUTATION
+        )
     )
+    if geographic_context_key:
+        automated_statement = automated_statement.where(*snapshot_context_filter)
+    automated_recomputations = int(session.scalar(automated_statement) or 0)
 
     blockers = []
-    if snapshot_total == 0 or int(
-        session.scalar(
-            select(func.count())
-            .select_from(EvidenceSnapshot)
-            .where(EvidenceSnapshot.status == EvidenceSnapshotStatus.VALIDATED)
-        )
-        or 0
-    ) == 0:
+    if snapshot_total == 0 or int(session.scalar(validated_count_statement) or 0) == 0:
         blockers.append("No validated evidence snapshot is available.")
     if operational_verified == 0:
         blockers.append(
@@ -562,22 +660,18 @@ def build_workspace(session: Session, *, include_context: bool = True) -> dict:
     return {
         "protocol": "phase11-evidence-workspace-v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "geographic_context_key": geographic_context_key or "ALL",
+        "geographic_disclaimer": (
+            "A context-scoped workspace contains only rows persisted with that "
+            "geographic context. NYC research data is never Dhaka operational "
+            "evidence; OSM context is not verified field infrastructure."
+        ),
         "evidence_integrity": {
             "snapshots": snapshot_total,
             "current_snapshots": current_total,
             "quality_counts": quality_counts,
             "provenance_counts": provenance_counts,
-            "automated_recomputations": int(
-                session.scalar(
-                    select(func.count())
-                    .select_from(EvidenceSnapshot)
-                    .where(
-                        EvidenceSnapshot.verification_status
-                        == SnapshotVerificationStatus.AUTOMATED_RECOMPUTATION
-                    )
-                )
-                or 0
-            ),
+            "automated_recomputations": automated_recomputations,
             "quality_issues": quality_issues[:20],
             "real_data_disclaimer": (
                 "REAL_ACQUIRED means bytes were retrieved from the named public "

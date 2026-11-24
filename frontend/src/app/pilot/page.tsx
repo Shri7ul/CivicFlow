@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { GeographyPanel } from "@/components/geography/geography-panel";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { PilotWorkspace } from "@/components/pilot/pilot-workspace";
@@ -17,7 +18,10 @@ export default function PilotPage() {
       <SiteHeader />
       <div className="flex-1">
         <AuthGuard>
-          <PilotWorkspace />
+          <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6">
+            <GeographyPanel />
+            <PilotWorkspace />
+          </div>
         </AuthGuard>
       </div>
       <SiteFooter />

@@ -76,6 +76,9 @@ class Pilot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         server_default=PilotMode.SIMULATION.value,
     )
     region: Mapped[str] = mapped_column(String(240), nullable=False)
+    geographic_context_key: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
+    )
     bbox: Mapped[list] = mapped_column(
         jsonb_column_type(), nullable=False, default=list, server_default=text("'[]'")
     )

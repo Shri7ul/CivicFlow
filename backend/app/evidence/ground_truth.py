@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AuthenticatedUser
+from app.geo.contexts import UNKNOWN_CONTEXT_KEY, resolve_context_from_point
 from app.governance.errors import GovernanceError
 from app.models.enums import GroundTruthStatus, ProvenanceKind
 from app.models.evidence import GroundTruthEvent, GroundTruthRecord
@@ -86,6 +87,11 @@ def create_record(
         record_key=f"gt-{uuid.uuid4().hex}",
         incident_id=payload.incident_id,
         source_type=payload.source_type,
+        geographic_context_key=(
+            resolve_context_from_point(payload.latitude, payload.longitude)
+            if payload.latitude is not None and payload.longitude is not None
+            else UNKNOWN_CONTEXT_KEY
+        ),
         provenance_kind=ProvenanceKind.OPERATIONAL,
         source_name=payload.source_name,
         source_reference=payload.source_reference,
@@ -247,12 +253,17 @@ def serialize_event(event: GroundTruthEvent) -> dict:
     }
 
 
-def status_counts(session: Session) -> dict[str, int]:
-    rows = session.execute(
-        select(GroundTruthRecord.status, func.count(GroundTruthRecord.id)).group_by(
-            GroundTruthRecord.status
+def status_counts(
+    session: Session, *, geographic_context_key: str | None = None
+) -> dict[str, int]:
+    statement = select(
+        GroundTruthRecord.status, func.count(GroundTruthRecord.id)
+    )
+    if geographic_context_key:
+        statement = statement.where(
+            GroundTruthRecord.geographic_context_key == geographic_context_key
         )
-    ).all()
+    rows = session.execute(statement.group_by(GroundTruthRecord.status)).all()
     counts = {status.value: 0 for status in GroundTruthStatus}
     for status, count in rows:
         counts[status.value] = int(count)

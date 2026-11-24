@@ -134,6 +134,9 @@ class EvidenceSnapshot(UUIDPrimaryKeyMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     geographic_coverage: Mapped[str | None] = mapped_column(Text, nullable=True)
+    geographic_context_key: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
+    )
     quality_status: Mapped[EvidenceQualityStatus] = mapped_column(
         enum_column(EvidenceQualityStatus, "evidence_quality_status"),
         nullable=False,
@@ -259,6 +262,9 @@ class GroundTruthRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         server_default=ProvenanceKind.OPERATIONAL.value,
     )
+    geographic_context_key: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
+    )
     source_name: Mapped[str] = mapped_column(String(240), nullable=False)
     source_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
     incident_type: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -358,6 +364,9 @@ class CorrelationUniverse(UUIDPrimaryKeyMixin, Base):
     version: Mapped[str] = mapped_column(String(40), nullable=False)
     provenance_kind: Mapped[ProvenanceKind] = mapped_column(
         enum_column(ProvenanceKind, "correlation_universe_provenance"), nullable=False
+    )
+    geographic_context_key: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="UNKNOWN", server_default="UNKNOWN", index=True
     )
     reference_complete: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
