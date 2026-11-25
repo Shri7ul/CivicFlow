@@ -55,7 +55,7 @@ class Pilot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 "start_date <= end_date", name="ck_pilots_date_order"
         ),
         CheckConstraint(
-"status IN ('DRAFT','PENDING_APPROVAL','APPROVED','ACTIVE','PAUSED','COMPLETED','REJECTED','ARCHIVED')",
+"status IN ('DRAFT','PENDING_APPROVAL','APPROVED','ACTIVE','PAUSED','COMPLETED','REJECTED','TERMINATED','ARCHIVED')",
             name="ck_pilots_status",
         ),
         Index("ix_pilots_status_created", "status", "created_at"),
@@ -135,6 +135,15 @@ class Pilot(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    terminated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    terminated_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    termination_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

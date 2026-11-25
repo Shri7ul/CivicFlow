@@ -293,13 +293,14 @@ class ValidationStatus(str, Enum):
 
 
 class PilotStatus(str, Enum):
-    DRAFT = "DRAFT"
+    DRAFT = "DRAFT"  # preparation state
     PENDING_APPROVAL = "PENDING_APPROVAL"
     APPROVED = "APPROVED"
     ACTIVE = "ACTIVE"
     PAUSED = "PAUSED"
     COMPLETED = "COMPLETED"
     REJECTED = "REJECTED"
+    TERMINATED = "TERMINATED"  # Phase 14: explicit shutdown, never automatic
     ARCHIVED = "ARCHIVED"
 
 
@@ -319,6 +320,7 @@ class PilotTransitionAction(str, Enum):
     PAUSE = "PAUSE"
     RESUME = "RESUME"
     COMPLETE = "COMPLETE"
+    TERMINATE = "TERMINATE"  # Phase 14: auditable shutdown with preservation
     ARCHIVE = "ARCHIVE"
 
 
@@ -413,3 +415,87 @@ class ProvenanceKind(str, Enum):
     SYNTHETIC = "SYNTHETIC"
     MIXED = "MIXED"
     UNKNOWN = "UNKNOWN"
+
+
+# ---------------------------------------------------------------------------
+# Phase 14 — controlled pilot, human validation and operational readiness.
+# Every value below is a control state. None of them grants operational
+# authority; activation always remains a separate, explicit, server-enforced
+# action.
+# ---------------------------------------------------------------------------
+
+
+class PilotBoundaryStatus(str, Enum):
+    UNVERIFIED = "UNVERIFIED"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    VERIFIED = "VERIFIED"
+    APPROVED = "APPROVED"
+
+
+class BoundarySourceType(str, Enum):
+    OFFICIAL_ADMINISTRATIVE = "OFFICIAL_ADMINISTRATIVE"
+    AUTHORITATIVE_PUBLIC = "AUTHORITATIVE_PUBLIC"
+    PARTNER_PROVIDED = "PARTNER_PROVIDED"
+    OSM_RESEARCH = "OSM_RESEARCH"
+    UNKNOWN = "UNKNOWN"
+
+
+class FieldObservationStatus(str, Enum):
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    VERIFIED = "VERIFIED"
+    REJECTED = "REJECTED"
+    REQUIRES_REVISION = "REQUIRES_REVISION"
+
+
+class ObservationCategory(str, Enum):
+    ROADS = "ROADS"
+    DRAINAGE = "DRAINAGE"
+    SANITATION = "SANITATION"
+    WATER = "WATER"
+    FLOODING = "FLOODING"
+    UTILITIES = "UTILITIES"
+    PUBLIC_SAFETY = "PUBLIC_SAFETY"
+    HEALTH = "HEALTH"
+    ENVIRONMENT = "ENVIRONMENT"
+    OTHER = "OTHER"
+
+
+class DataSourceAuthorization(str, Enum):
+    UNAUTHORIZED = "UNAUTHORIZED"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    AUTHORIZED = "AUTHORIZED"
+    RESEARCH_ONLY = "RESEARCH_ONLY"
+    REVOKED = "REVOKED"
+
+
+class PilotIncidentSeverity(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class PilotIncidentStatus(str, Enum):
+    OPEN = "OPEN"
+    INVESTIGATING = "INVESTIGATING"
+    MITIGATED = "MITIGATED"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
+
+
+class ModelReadinessLevel(str, Enum):
+    OPERATIONALLY_UNAVAILABLE = "OPERATIONALLY_UNAVAILABLE"
+    RESEARCH_ONLY = "RESEARCH_ONLY"
+    EXPERIMENTAL = "EXPERIMENTAL"
+    VALIDATED = "VALIDATED"
+    APPROVED_FOR_BOUNDED_PILOT = "APPROVED_FOR_BOUNDED_PILOT"
+
+
+class AttestationStatus(str, Enum):
+    NOT_ASSESSED = "NOT_ASSESSED"
+    BLOCKED = "BLOCKED"
+    IN_PROGRESS = "IN_PROGRESS"
+    PASS = "PASS"
+    FAIL = "FAIL"

@@ -78,6 +78,17 @@ EXPECTED_TABLES = {
     "ground_truth_events",
     "correlation_universes",
     "geographic_contexts",
+    "pilot_boundaries",
+    "pilot_boundary_events",
+    "field_observations",
+    "field_observation_events",
+    "pilot_data_sources",
+    "pilot_incidents",
+    "pilot_incident_events",
+    "baseline_comparisons",
+    "pilot_shutdowns",
+    "phase14_attestations",
+    "phase14_attestation_events",
 }
 
 

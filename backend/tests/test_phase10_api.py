@@ -270,6 +270,18 @@ def test_activation_uses_independent_readiness_when_gates_pass(
                 "activation_blockers": [],
             },
         )
+        # Phase 14 adds a second, independent server-side gate. This test
+        # exercises Phase 10 transition mechanics; the real Phase 14 gate is
+        # covered by its own adversarial tests in test_phase14_pilot.py.
+        monkeypatch.setattr(
+            "app.phase14.readiness.assess_phase14_readiness",
+            lambda session, pilot=None: {
+                "protocol": "phase14-final-gate-v1",
+                "overall": "READY_FOR_CONTROLLED_PILOT",
+                "ready_for_activation": True,
+                "blockers": [],
+            },
+        )
         response = client.post(
             f"/api/v1/governance/pilots/{pilot.id}/transition",
             json={"action": "ACTIVATE"},

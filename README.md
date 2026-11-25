@@ -288,6 +288,24 @@ current status, verification evidence, and known boundaries.
 - See [docs/development/PHASE_12_IMPLEMENTATION_REPORT.md](docs/development/PHASE_12_IMPLEMENTATION_REPORT.md)
   and the other `docs/development/PHASE_12_*.md` documents.
 
+### Phase 14 — controlled pilot and operational readiness
+
+- Added migration `0024_phase14_pilot` and a governed control plane: pilot
+  boundary registration with hashing and distinct-human verification, a field
+  observation workflow with explicit ground-truth promotion, data-source
+  authorization, pilot incidents with a critical processing interlock,
+  null-safe baseline comparison records, human attestations and a
+  non-destructive TERMINATE/shutdown path.
+- The final readiness gate is recomputed server-side during pilot activation;
+  client flags and attestations alone cannot bypass it. Default status is
+  `NOT_READY` with `pilot_activation_authorized = false`.
+- No pilot was approved or activated, no model was promoted, and no civic action
+  was authorized. Authoritative Dhaka boundary/data, ground truth, validation
+  labels, legal/stakeholder approval and a verified restore point remain
+  BLOCKED; the live database remains at `0022_snapshot_provenance`.
+- See [docs/development/PHASE14_FINAL_REPORT.md](docs/development/PHASE14_FINAL_REPORT.md)
+  and the other `PHASE14_*` documents.
+
 ### Phase 7 — operational maturity and intelligence validation
 
 - Model registry and activation events with full configuration and stable

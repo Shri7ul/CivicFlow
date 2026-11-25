@@ -26,6 +26,11 @@ ACTION_RULES: dict[PilotTransitionAction, set[PilotStatus]] = {
     PilotTransitionAction.PAUSE: {PilotStatus.ACTIVE},
     PilotTransitionAction.RESUME: {PilotStatus.PAUSED},
     PilotTransitionAction.COMPLETE: {PilotStatus.ACTIVE, PilotStatus.PAUSED},
+    PilotTransitionAction.TERMINATE: {
+        PilotStatus.APPROVED,
+        PilotStatus.ACTIVE,
+        PilotStatus.PAUSED,
+    },
     PilotTransitionAction.ARCHIVE: {
         PilotStatus.DRAFT,
         PilotStatus.COMPLETED,
@@ -41,6 +46,7 @@ ACTION_TARGET: dict[PilotTransitionAction, PilotStatus] = {
     PilotTransitionAction.PAUSE: PilotStatus.PAUSED,
     PilotTransitionAction.RESUME: PilotStatus.ACTIVE,
     PilotTransitionAction.COMPLETE: PilotStatus.COMPLETED,
+    PilotTransitionAction.TERMINATE: PilotStatus.TERMINATED,
     PilotTransitionAction.ARCHIVE: PilotStatus.ARCHIVED,
 }
 
@@ -236,7 +242,11 @@ def transition(
         )
     clean_note = _text(note, field="note")
 
-    if action in {PilotTransitionAction.REJECT, PilotTransitionAction.PAUSE}:
+    if action in {
+        PilotTransitionAction.REJECT,
+        PilotTransitionAction.PAUSE,
+        PilotTransitionAction.TERMINATE,
+    }:
         clean_note = _text(note, field="reason", required=True)
     if action == PilotTransitionAction.APPROVE:
         if actor.profile.id in {pilot.created_by, pilot.owner_id}:
@@ -280,6 +290,23 @@ def transition(
                 status_code=409,
                 code="readiness_not_met",
             )
+        # Phase 14 final gate is server-enforced here. A client cannot submit a
+        # "ready" flag; the gate is recomputed from persisted evidence.
+        from app.phase14.readiness import assess_phase14_readiness
+
+        final_report = assess_phase14_readiness(session, pilot)
+        if not final_report["ready_for_activation"]:
+            raise GovernanceError(
+                "Phase 14 final readiness gate is not met: "
+                + "; ".join(final_report["blockers"][:6]),
+                status_code=409,
+                code="phase14_readiness_not_met",
+            )
+        report["phase14_final_gate"] = {
+            "protocol": final_report["protocol"],
+            "overall": final_report["overall"],
+            "ready_for_activation": final_report["ready_for_activation"],
+        }
         pilot.activation_readiness = report
 
     from_status = pilot.status
@@ -303,6 +330,10 @@ def transition(
         pilot.pause_reason = None
     elif action == PilotTransitionAction.COMPLETE:
         pilot.completed_at = now
+    elif action == PilotTransitionAction.TERMINATE:
+        pilot.terminated_at = now
+        pilot.terminated_by = actor.profile.id
+        pilot.termination_reason = clean_note
     elif action == PilotTransitionAction.ARCHIVE:
         pilot.archived_at = now
 

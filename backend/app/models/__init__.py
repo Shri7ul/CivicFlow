@@ -122,6 +122,20 @@ from app.models.operations import (
     Notification,
     NotificationPreference,
 )
+from app.models.phase14 import (
+    BaselineComparison,
+    FieldObservation,
+    FieldObservationEvent,
+    Phase14Attestation,
+    Phase14AttestationEvent,
+    PilotBoundary,
+    PilotBoundaryEvent,
+    PilotDataSource,
+    PilotIncident,
+    PilotIncidentEvent,
+    PilotShutdown,
+    DHAKA_MODEL_READINESS_LEVEL,
+)
 
 __all__ = [
     "GeographicContextRecord",
@@ -233,4 +247,16 @@ __all__ = [
     "ValidationEvidenceKind",
     "ValidationExperimentType",
     "ValidationStatus",
+    "BaselineComparison",
+    "DHAKA_MODEL_READINESS_LEVEL",
+    "FieldObservation",
+    "FieldObservationEvent",
+    "Phase14Attestation",
+    "Phase14AttestationEvent",
+    "PilotBoundary",
+    "PilotBoundaryEvent",
+    "PilotDataSource",
+    "PilotIncident",
+    "PilotIncidentEvent",
+    "PilotShutdown",
 ]

@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     phase10,
     phase11,
     phase12,
+    phase14,
     reviews,
     risk,
     validation,
@@ -56,5 +57,8 @@ api_router.include_router(
 )
 api_router.include_router(
     validation.router, prefix="/validation", tags=["validation"]
+)
+api_router.include_router(
+    phase14.router, prefix="/governance/phase14", tags=["phase14-pilot-controls"]
 )
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
