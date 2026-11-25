@@ -13,6 +13,7 @@ import {
   severities,
   severityLabels,
 } from "@/lib/incidents";
+import { parseCoordinates } from "@/lib/location";
 import type { IncidentCategory, IncidentSeverity } from "@/types/incidents";
 
 const inputClass =
@@ -31,8 +32,8 @@ export function ReportIncidentForm() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<IncidentCategory>("DRAINAGE");
   const [severity, setSeverity] = useState<IncidentSeverity>("MEDIUM");
-  const [latitude, setLatitude] = useState("23.8103");
-  const [longitude, setLongitude] = useState("90.4125");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -67,16 +68,13 @@ export function ReportIncidentForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    const lat = Number(latitude);
-    const lon = Number(longitude);
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      setError("Latitude must be between -90 and 90.");
+    const coordinates = parseCoordinates(latitude, longitude);
+    if (!coordinates.ok) {
+      setError(coordinates.message);
       return;
     }
-    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
-      setError("Longitude must be between -180 and 180.");
-      return;
-    }
+    const lat = coordinates.latitude;
+    const lon = coordinates.longitude;
     setSubmitting(true);
     try {
       const incident = await createIncident(apiRequest, {

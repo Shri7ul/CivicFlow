@@ -19,12 +19,17 @@ describe("frontend production security headers", () => {
     expect(values.get("x-content-type-options")).toBe("nosniff");
     expect(values.get("x-frame-options")).toBe("DENY");
     expect(values.get("referrer-policy")).toBe("no-referrer");
-    expect(values.get("permissions-policy")).toContain("geolocation=()");
+    const permissions = values.get("permissions-policy") ?? "";
+    expect(permissions).toContain("geolocation=(self)");
+    expect(permissions).toContain("camera=()");
+    expect(permissions).toContain("microphone=()");
 
     const csp = values.get("content-security-policy") ?? "";
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).not.toContain("unsafe-eval");
+    // MapLibre fetches glyph PBFs with fetch(), so connect-src must allow it.
+    expect(csp).toContain("https://fonts.openmaptiles.org");
   });
 
   it("does not embed any service-role credential in the client configuration", () => {

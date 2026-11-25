@@ -37,6 +37,15 @@ describe("email verification redirect selection", () => {
     expect(getEmailRedirectTo()).toBe(`${PRODUCTION_ORIGIN}/auth/callback`);
   });
 
+  it("builds a password-recovery callback that targets the update-password page", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", PRODUCTION_ORIGIN);
+    expect(
+      getEmailRedirectTo("/auth/callback?next=%2Fupdate-password"),
+    ).toBe(
+      `${PRODUCTION_ORIGIN}/auth/callback?next=%2Fupdate-password`,
+    );
+  });
+
   it("builds the development verification callback URL", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
     setBrowserOrigin(DEFAULT_SITE_ORIGIN);

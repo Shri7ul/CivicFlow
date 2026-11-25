@@ -64,6 +64,36 @@ export function hasSupabaseAuthCookie(cookies: readonly CookieLike[]): boolean {
   });
 }
 
+/**
+ * Navigation paths a role can actually use. This is UX only: the backend
+ * independently enforces every permission. Citizens are shown only modules
+ * whose backend endpoints accept an active CITIZEN profile.
+ */
+export function navigationForRole(role: ProfileRole): readonly string[] {
+  const common = [
+    DASHBOARD_PREFIX,
+    INCIDENTS_PREFIX,
+    MAP_PATH,
+    RISK_PATH,
+  ];
+  if (role === "CITIZEN") {
+    return common;
+  }
+  return [
+    ...common,
+    DECISIONS_PATH,
+    OPERATIONS_PATH,
+    VALIDATION_PATH,
+    PILOT_PATH,
+  ];
+}
+
+export function canAccessPath(role: ProfileRole, pathname: string): boolean {
+  return navigationForRole(role).some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export function roleLabel(role: ProfileRole): string {
   switch (role) {
     case "ADMIN":

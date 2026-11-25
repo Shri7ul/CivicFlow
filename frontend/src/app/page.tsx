@@ -119,7 +119,7 @@ const architectureCards = [
   {
     label: "Data",
     title: "PostgreSQL + PostGIS",
-    status: "35 tables",
+    status: "Alembic-managed schema",
     description:
       "Alembic-managed schema, PostGIS geography and GIST indexes, staff-only planning and governance tables, RLS policies, risk snapshots, and safe seed data.",
     tags: ["Supabase", "PostgreSQL", "PostGIS", "Alembic"],
@@ -177,7 +177,7 @@ export default function HomePage() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1.5 text-xs font-medium text-emerald-300">
               <span className="size-1.5 rounded-full bg-emerald-400" />
-              {siteConfig.phase} · Incident operations
+              {siteConfig.phase} · Urban response workspace
             </span>
 
             <h1 className="mt-6 max-w-4xl text-balance text-[2.65rem] font-semibold leading-[1.03] tracking-[-0.045em] text-white sm:text-6xl lg:text-7xl">
@@ -196,7 +196,7 @@ export default function HomePage() {
                 href="#status"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Explore Phase 7 status
+                Explore current status
                 <ArrowIcon />
               </a>
               <a
@@ -213,7 +213,7 @@ export default function HomePage() {
                   Phase
                 </dt>
                 <dd className="mt-1.5 text-sm font-medium text-slate-200">
-                  6 · Decision planning
+                  {siteConfig.phase}
                 </dd>
               </div>
               <div>
@@ -263,9 +263,10 @@ export default function HomePage() {
                 </h2>
               </div>
               <p className="max-w-md text-sm leading-6 text-slate-500">
-                Phase 5 adds explainable H3 risk cells, temporal trends, and
-                infrastructure exposure while preserving the existing incident,
-                spatial, evidence, and intelligence workflows.
+                Incident reporting, role-scoped queues, operational lifecycles,
+                H3 risk analysis, planning simulations and governed research
+                workflows are implemented. Risk outputs are research-oriented
+                and require authoritative data to be meaningful.
               </p>
             </div>
 
@@ -299,10 +300,10 @@ export default function HomePage() {
               <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-base font-semibold text-white">
-                    Planned for later phases
+                    Needs real data or operator action
                   </h3>
                   <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-400">
-                    Not started
+                    EXTERNAL
                   </span>
                 </div>
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -320,8 +321,9 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <p className="mt-6 rounded-lg border border-amber-400/10 bg-amber-400/[0.03] px-3.5 py-3 text-xs leading-5 text-amber-200/60">
-                  These modules remain out of scope for the current Phase 5 core.
-                  Nothing on this list is available in the current application.
+                  These items depend on authoritative datasets, licensed
+                  sources, or provider-side configuration. No finished module
+                  is hidden from this list.
                 </p>
               </div>
             </div>
@@ -344,8 +346,9 @@ export default function HomePage() {
               A clean foundation for civic intelligence
             </h2>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              Phase 5 keeps authentication, RBAC, RLS, spatial, evidence, and
-              incident foundations intact while adding explainable urban risk.
+              Authentication, RBAC, RLS, spatial validation, evidence handling
+              and incident foundations remain intact while risk and planning
+              workflows operate as governed, research-oriented capabilities.
             </p>
           </div>
 
@@ -386,8 +389,9 @@ export default function HomePage() {
           <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.04] to-transparent p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-sm font-medium text-slate-200">
-                Phase 5 urban risk intelligence is live alongside incident,
-                spatial, and private-evidence operations.
+                Urban risk intelligence runs alongside incident, spatial, and
+                private-evidence operations. Outputs are research-oriented; no
+                pilot is active.
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
                 Health API:{" "}

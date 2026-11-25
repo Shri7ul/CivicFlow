@@ -5,7 +5,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { roleLabel } from "@/lib/auth/routing";
+import { navigationForRole, roleLabel } from "@/lib/auth/routing";
+
+const NAV_ITEMS = [
+  { path: "/incidents", label: "Incidents" },
+  { path: "/map", label: "Map" },
+  { path: "/risk", label: "Risk" },
+  { path: "/decisions", label: "Decisions" },
+  { path: "/operations", label: "Operations" },
+  { path: "/validation", label: "Validation" },
+  { path: "/pilot", label: "Pilot" },
+  { path: "/dashboard", label: "Dashboard" },
+] as const;
 
 export function AuthNav({ compact = false }: { compact?: boolean }) {
   const { status, profile, signOut } = useAuth();
@@ -32,48 +43,27 @@ export function AuthNav({ compact = false }: { compact?: boolean }) {
             {roleLabel(profile.role)}
           </span>
         ) : null}
-        <Link
-          href="/incidents"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Incidents
-        </Link>
-        <Link
-          href="/map"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Map
-        </Link>
-        <Link
-          href="/risk"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Risk
-        </Link>
-        <Link
-          href="/decisions"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Decisions
-        </Link>
-        <Link
-          href="/operations"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Operations
-        </Link>
-        <Link
-          href="/validation"
-          className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-        >
-          Validation
-        </Link>
-        <Link
-          href="/dashboard"
-          className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/15 sm:px-3 sm:text-sm"
-        >
-          Dashboard
-        </Link>
+        {NAV_ITEMS.filter((item) =>
+          navigationForRole(profile.role).includes(item.path),
+        ).map((item) =>
+          item.path === "/dashboard" ? (
+            <Link
+              key={item.path}
+              href={item.path}
+              className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/15 sm:px-3 sm:text-sm"
+            >
+              {item.label}
+            </Link>
+          ) : (
+            <Link
+              key={item.path}
+              href={item.path}
+              className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
+            >
+              {item.label}
+            </Link>
+          ),
+        )}
         <button
           type="button"
           disabled={pending}

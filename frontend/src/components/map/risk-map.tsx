@@ -594,6 +594,10 @@ export function RiskMapView() {
   }, [apiRequest, resolution, selectedId, windowLabel]);
 
   function selectCell(cell: RiskCellBrief) {
+    // Clear the previous cell's detail immediately so it cannot remain visible
+    // while the next cell is loading.
+    setDetail(null);
+    setDetailError(null);
     setSelectedId(cell.h3_cell_id);
     mapRef.current?.flyTo({
       center: [cell.center_longitude, cell.center_latitude],

@@ -518,8 +518,9 @@ export function IncidentMapView() {
             Incident map
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Explore live reports around Dhaka. Pan or zoom to query the current
-            viewport; markers cluster as you zoom out.
+            Explore reports in the current viewport. Pan or zoom to query the
+            API again; markers cluster as you zoom out. Dhaka is a research
+            context, not an active operational pilot.
           </p>
         </div>
         <Link

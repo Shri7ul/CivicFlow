@@ -382,6 +382,8 @@ export function ValidationDashboard() {
   const correlationMetrics = asRecord(correlationDetail?.metrics);
   const decisionMetrics = asRecord(decisionDetail?.metrics);
   const isAdmin = profile?.role === "ADMIN";
+  const canRun =
+    profile?.role === "WORKER" || profile?.role === "ADMIN";
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8">
@@ -410,35 +412,39 @@ export function ValidationDashboard() {
           >
             Refresh
           </button>
-          <button
-            type="button"
-            className={control}
-            onClick={() =>
-              void run("correlation", () => runCorrelationValidation(apiRequest))
-            }
-            disabled={busy !== null}
-          >
-            {busy === "correlation" ? "Running…" : "Run synthetic correlation"}
-          </button>
-          <button
-            type="button"
-            className={control}
-            onClick={() => void run("decision", () => runDecisionValidation(apiRequest))}
-            disabled={busy !== null}
-          >
-            {busy === "decision" ? "Running…" : "Run planning simulation"}
-          </button>
-          {dataset ? (
-            <button
-              type="button"
-              className={control}
-              onClick={() =>
-                void run("risk", () => runRiskValidation(apiRequest, dataset.id))
-              }
-              disabled={busy !== null}
-            >
-              {busy === "risk" ? "Backtesting…" : "Run temporal backtest"}
-            </button>
+          {canRun ? (
+            <>
+              <button
+                type="button"
+                className={control}
+                onClick={() =>
+                  void run("correlation", () => runCorrelationValidation(apiRequest))
+                }
+                disabled={busy !== null}
+              >
+                {busy === "correlation" ? "Running…" : "Run synthetic correlation"}
+              </button>
+              <button
+                type="button"
+                className={control}
+                onClick={() => void run("decision", () => runDecisionValidation(apiRequest))}
+                disabled={busy !== null}
+              >
+                {busy === "decision" ? "Running…" : "Run planning simulation"}
+              </button>
+              {dataset ? (
+                <button
+                  type="button"
+                  className={control}
+                  onClick={() =>
+                    void run("risk", () => runRiskValidation(apiRequest, dataset.id))
+                  }
+                  disabled={busy !== null}
+                >
+                  {busy === "risk" ? "Backtesting…" : "Run temporal backtest"}
+                </button>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>

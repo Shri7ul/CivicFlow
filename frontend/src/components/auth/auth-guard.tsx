@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { buildLoginHref } from "@/lib/auth/routing";
+import { buildLoginHref, canAccessPath } from "@/lib/auth/routing";
 import { isAuthReady } from "@/lib/auth/state";
 
 function GuardFrame({ children }: { children: ReactNode }) {
@@ -27,15 +27,21 @@ function LoadingCard({ label }: { label: string }) {
 }
 
 export function AuthGuard({ children }: { children: ReactNode }) {
-  const { status, error, isConfigured, refreshProfile, signOut } = useAuth();
+  const { status, error, isConfigured, profile, refreshProfile, signOut } =
+    useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace(buildLoginHref(pathname));
+      return;
     }
-  }, [pathname, router, status]);
+    // UX guard only: the backend independently enforces role permissions.
+    if (profile && !canAccessPath(profile.role, pathname)) {
+      router.replace("/dashboard");
+    }
+  }, [pathname, profile, router, status]);
 
   if (!isConfigured || status === "unconfigured") {
     return (
@@ -103,6 +109,14 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     return (
       <GuardFrame>
         <LoadingCard label="Redirecting to sign in…" />
+      </GuardFrame>
+    );
+  }
+
+  if (profile && !canAccessPath(profile.role, pathname)) {
+    return (
+      <GuardFrame>
+        <LoadingCard label="This module is not available for your role. Redirecting…" />
       </GuardFrame>
     );
   }

@@ -220,9 +220,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       Object.entries(authorizationHeader(token)).forEach(([name, value]) => {
         headers.set(name, value);
       });
-      return apiFetch<T>(path, { ...options, headers });
+      try {
+        return await apiFetch<T>(path, { ...options, headers });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          void signOut();
+          throw new ApiError(
+            "Your session has expired. Sign in again to continue.",
+            { status: 401, code: "session_expired" },
+          );
+        }
+        throw error;
+      }
     },
-    [],
+    [signOut],
   );
 
   const uploadRequest = useCallback(
@@ -232,9 +243,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onProgress?: UploadProgress,
     ): Promise<T> => {
       const token = requireAccessToken(sessionRef.current?.access_token);
-      return uploadFormData<T>(path, formData, token, { onProgress });
+      try {
+        return await uploadFormData<T>(path, formData, token, { onProgress });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          void signOut();
+          throw new ApiError(
+            "Your session has expired. Sign in again to continue.",
+            { status: 401, code: "session_expired" },
+          );
+        }
+        throw error;
+      }
     },
-    [],
+    [signOut],
   );
 
   const refreshProfile = useCallback(async () => {

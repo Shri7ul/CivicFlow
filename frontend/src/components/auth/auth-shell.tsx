@@ -52,9 +52,9 @@ export function AuthShell({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300 lg:hidden">
               {eyebrow}
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white lg:mt-0">
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white lg:mt-0">
               {title}
-            </h1>
+            </h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">{subtitle}</p>
             <div className="mt-6">{children}</div>
             <p className="mt-6 text-center text-[11px] leading-5 text-slate-500">

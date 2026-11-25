@@ -17,6 +17,9 @@ type LocationPickerProps = {
 };
 
 function numeric(value: string, fallback: number): number {
+  if (value.trim() === "") {
+    return fallback;
+  }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
@@ -59,6 +62,7 @@ export function LocationPicker({
           attributionControl: false,
         });
         mapRef.current = map;
+        const activeMap = map;
         map.addControl(
           new maplibre.NavigationControl({ showCompass: false }),
           "top-right",
@@ -67,14 +71,24 @@ export function LocationPicker({
           new maplibre.AttributionControl({ compact: true }),
           "bottom-right",
         );
-        const marker = new maplibre.Marker({ color: "#34d399" })
-          .setLngLat([lon, lat])
-          .addTo(map);
-        markerRef.current = marker;
+        // No marker is shown until a real location is chosen. Rendering a
+        // marker at the map's default center would present a fabricated pin.
+        const hasLocation = latitude.trim() !== "" && longitude.trim() !== "";
+        markerRef.current = hasLocation
+          ? new maplibre.Marker({ color: "#34d399" })
+              .setLngLat([lon, lat])
+              .addTo(map)
+          : null;
         map.on("click", (event) => {
           const nextLat = event.lngLat.lat.toFixed(6);
           const nextLon = event.lngLat.lng.toFixed(6);
-          marker.setLngLat([event.lngLat.lng, event.lngLat.lat]);
+          if (markerRef.current) {
+            markerRef.current.setLngLat([event.lngLat.lng, event.lngLat.lat]);
+          } else {
+            markerRef.current = new maplibre.Marker({ color: "#34d399" })
+              .setLngLat([event.lngLat.lng, event.lngLat.lat])
+              .addTo(activeMap);
+          }
           onChangeRef.current(nextLat, nextLon);
         });
         map.on("load", () => {
@@ -104,6 +118,9 @@ export function LocationPicker({
 
   useEffect(() => {
     if (!ready || !markerRef.current) {
+      return;
+    }
+    if (latitude.trim() === "" || longitude.trim() === "" || !markerRef.current) {
       return;
     }
     const lat = Number(latitude);

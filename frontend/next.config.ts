@@ -23,6 +23,9 @@ const connectSources = [
   apiOrigin(),
   "https://*.supabase.co",
   "wss://*.supabase.co",
+  // MapLibre fetches glyph PBFs with fetch(), which is governed by
+  // connect-src (not font-src). Without this origin all map text labels fail.
+  "https://fonts.openmaptiles.org",
 ].filter((item): item is string => Boolean(item));
 
 const contentSecurityPolicy = [
@@ -44,7 +47,9 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "no-referrer" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    // geolocation=(self) is required by the incident locator and the map's
+    // "use my location" control. Keeping it empty made both features unusable.
+    value: "camera=(), microphone=(), geolocation=(self), payment=()",
   },
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];

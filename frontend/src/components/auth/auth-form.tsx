@@ -142,6 +142,17 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         />
       </label>
 
+      {isLogin ? (
+        <div className="-mt-2 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-emerald-300 underline-offset-4 hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
+      ) : null}
+
       {mode === "signup" ? (
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400">

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildLoginHref,
+  canAccessPath,
   hasSupabaseAuthCookie,
   isProtectedPath,
+  navigationForRole,
   roleLabel,
   safeNextPath,
 } from "@/lib/auth/routing";
@@ -52,6 +54,33 @@ describe("protected routing", () => {
     );
     expect(buildLoginHref("/dashboard")).toBe("/login");
     expect(buildLoginHref("https://evil.example")).toBe("/login");
+  });
+});
+
+describe("role-aware navigation", () => {
+  it("shows only modules a citizen can actually use", () => {
+    const paths = navigationForRole("CITIZEN");
+    expect(paths).toContain("/dashboard");
+    expect(paths).toContain("/incidents");
+    expect(paths).toContain("/map");
+    expect(paths).toContain("/risk");
+    expect(paths).not.toContain("/decisions");
+    expect(paths).not.toContain("/operations");
+    expect(paths).not.toContain("/validation");
+    expect(canAccessPath("CITIZEN", "/operations")).toBe(false);
+    expect(canAccessPath("CITIZEN", "/validation/report")).toBe(false);
+    expect(canAccessPath("CITIZEN", "/incidents/123")).toBe(true);
+  });
+
+  it("shows staff modules to workers and admins", () => {
+    for (const role of ["WORKER", "ADMIN"] as const) {
+      const paths = navigationForRole(role);
+      expect(paths).toContain("/decisions");
+      expect(paths).toContain("/operations");
+      expect(paths).toContain("/validation");
+      expect(paths).toContain("/pilot");
+      expect(canAccessPath(role, "/operations/alerts")).toBe(true);
+    }
   });
 });
 
