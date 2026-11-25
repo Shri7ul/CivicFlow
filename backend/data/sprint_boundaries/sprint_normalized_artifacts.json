@@ -1,0 +1,13 @@
+{
+  "retrieved_at": "2026-11-25T15:48:31.452864+00:00",
+  "city": {
+    "file": "civicflow_dhaka_bgisp_official_city_corporations.geojson",
+    "bytes": 197239,
+    "sha256": "33b586e0f170157bc363ed4d0f306e9bfdf60526200854e16808b1091775701a"
+  },
+  "wards": {
+    "file": "civicflow_dhaka_bgisp_official_dncc_dscc_wards.geojson",
+    "bytes": 2710610,
+    "sha256": "15a65b23cc69d6e1ccf6dae2f9c62c4543d7972024c8cab1816ef8bd4632c9be"
+  }
+}

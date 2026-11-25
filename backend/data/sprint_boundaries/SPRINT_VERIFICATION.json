@@ -1,0 +1,47 @@
+{
+  "generated_at": "2026-11-25T15:48:43.370774+00:00",
+  "boundary_comparison": [
+    {
+      "name": "Dhaka North City Corporation",
+      "cod_ab_bbox": [
+        90.32890754700009,
+        23.738893635000125,
+        90.49036082500004,
+        23.90069359000006
+      ],
+      "bgisp_bbox": [
+        90.32890723700007,
+        23.73889265300005,
+        90.49036048900007,
+        23.900692811000056
+      ],
+      "max_bbox_delta_deg": 9.82000074145617e-07
+    },
+    {
+      "name": "Dhaka South City Corporation",
+      "cod_ab_bbox": [
+        90.35172309800004,
+        23.669187140000133,
+        90.51198070400017,
+        23.785340364999968
+      ],
+      "bgisp_bbox": [
+        90.35171920000005,
+        23.66918662100005,
+        90.51198026000009,
+        23.78533972300005
+      ],
+      "max_bbox_delta_deg": 3.89799998856688e-06
+    }
+  ],
+  "bgisp_ward_features": 164,
+  "bgisp_ward_centroids_inside_parent_city": 164,
+  "bgisp_unique_ward_geo_codes": 163,
+  "bgisp_unique_ward_names": 134,
+  "bgisp_by_city": {
+    "Dhaka North City Corporation": 76,
+    "Dhaka South City Corporation": 88
+  },
+  "geoboundaries_adm4_candidates_within_cod_ab": 138,
+  "note": "All geometry evidence remains unverified for pilot use; no boundary approved."
+}
