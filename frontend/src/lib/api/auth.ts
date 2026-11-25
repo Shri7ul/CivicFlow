@@ -1,5 +1,5 @@
 import type { Profile } from "@/types/auth";
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, ApiError } from "@/lib/api/client";
 
 function authorization(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
@@ -9,6 +9,26 @@ export function fetchCurrentProfile(token: string): Promise<Profile> {
   return apiFetch<Profile>("/api/v1/auth/me", {
     headers: authorization(token),
   });
+}
+
+/**
+ * Load the caller's profile, provisioning a CITIZEN profile only when the
+ * backend explicitly reports that this verified identity has none. Existing
+ * profiles are reused; no role is ever supplied by the browser.
+ */
+export async function loadOrProvisionProfile(token: string): Promise<Profile> {
+  try {
+    return await fetchCurrentProfile(token);
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.status === 403 &&
+      error.code === "profile_required"
+    ) {
+      return provisionProfile(token);
+    }
+    throw error;
+  }
 }
 
 export function provisionProfile(

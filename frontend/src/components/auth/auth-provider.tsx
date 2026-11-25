@@ -19,7 +19,10 @@ import {
   type ApiRequestOptions,
   type UploadProgress,
 } from "@/lib/api/client";
-import { fetchCurrentProfile, provisionProfile } from "@/lib/api/auth";
+import {
+  fetchCurrentProfile,
+  loadOrProvisionProfile,
+} from "@/lib/api/auth";
 import { profileLoadMessage } from "@/lib/api/errors";
 import { getEmailRedirectTo } from "@/lib/auth/redirect";
 import { authorizationHeader, requireAccessToken } from "@/lib/auth/session";
@@ -98,20 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("loading");
 
     try {
-      let nextProfile: Profile;
-      try {
-        nextProfile = await fetchCurrentProfile(session.access_token);
-      } catch (profileError) {
-        if (
-          profileError instanceof ApiError &&
-          profileError.status === 403 &&
-          profileError.code === "profile_required"
-        ) {
-          nextProfile = await provisionProfile(session.access_token);
-        } else {
-          throw profileError;
-        }
-      }
+      const nextProfile: Profile = await loadOrProvisionProfile(
+        session.access_token,
+      );
 
       if (requestId !== requestIdRef.current) {
         return;

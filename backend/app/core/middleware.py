@@ -22,7 +22,7 @@ logger = get_logger("request")
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _DOCS_PATHS = ("/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect")
-_HEALTH_PATHS = ("/health",)
+_HEALTH_PATHS = ("/health", "/api/v1/health")
 
 
 class _FixedWindowLimiter:
@@ -88,6 +88,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         token = set_request_id(request_id)
 
         rejected = False
+        response: Response | None = None
         try:
             if (
                 settings.rate_limiting_active
@@ -105,7 +106,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                         media_type="application/json",
                         headers={"Retry-After": "60"},
                     )
-            else:
+            # A mutating request that passes the limiter must still reach the
+            # application. Leaving `response` unbound here produced a 500 for
+            # every allowed POST/PUT/PATCH/DELETE when rate limiting was on.
+            if response is None:
                 response = await call_next(request)
         except Exception:
             duration_ms = (time.perf_counter() - started) * 1000
