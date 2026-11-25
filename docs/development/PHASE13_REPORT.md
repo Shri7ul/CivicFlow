@@ -241,13 +241,15 @@ Docs: `PHASE13_REPORT.md`, `PHASE13_BASELINE.md`, `PHASE13_SECURITY_AUDIT.md`,
 
 ## 18. Git commit hash
 
-Recorded after the Phase 13 commit (see the final Git-state update appended to
-this report).
+- Implementation commit: **`c842dc3`** — `feat(civicflow): harden production and verify Dhaka evidence readiness` (23 files).
+- Follow-up docs-only commit records this final Git state.
 
 ## 19. Push status
 
-Recorded after the Phase 13 push (see the final Git-state update appended to
-this report).
+Push verified: `1c3879e..c842dc3  main -> main` on `origin`. A fetch before
+pushing showed `0 1` (local exactly one commit ahead, zero behind), so no
+remote work was overwritten. No force-push and no history rewrite. Local HEAD
+and `origin/main` matched after the push; working tree was clean.
 
 ## 20. Final verdict
 
