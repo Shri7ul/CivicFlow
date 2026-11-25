@@ -15,16 +15,17 @@ services:
   - type: web
     name: civicflow-api
     runtime: python
-    plan: starter
+    plan: free
     region: singapore
     branch: main
     rootDir: backend
-    buildCommand: |
-      python -m pip install --upgrade pip
-      python -m pip install -e .
+    buildCommand: python -m pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
+      # 3.11 is the declared minimum (pyproject.toml: requires-python >=3.11)
+      # and the exact version exercised by CI. Render's 3.14 default is outside
+      # the project's tested matrix; pin 3.11 for a reproducible deploy.
       - key: PYTHON_VERSION
         value: "3.11"
       - key: APP_ENV
@@ -57,7 +58,9 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Non-secret values with code defaults; pinned explicitly so an operator
+      # is never forced to type a blank value into a validated field.
       - key: SUPABASE_JWT_AUDIENCE
-        sync: false
+        value: authenticated
       - key: SUPABASE_STORAGE_BUCKET
-        sync: false
+        value: incident-evidence

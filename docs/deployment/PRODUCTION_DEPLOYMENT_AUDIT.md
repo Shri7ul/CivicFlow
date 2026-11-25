@@ -43,8 +43,8 @@ This is **local process verification**, not a deployed-service verification.
 
 | Component | Configured in repository | Verified live access | Status |
 | --- | --- | --- | --- |
-| Render backend | No `render.yaml`, no service definition, no Dockerfile | No connected Render tool, no CLI, no API token in environment | **BLOCKED** |
-| Vercel frontend | No `vercel.json`, no project definition | No connected Vercel tool, no CLI, no API token in environment | **BLOCKED** |
+| Render backend | `render.yaml` now present (added by this sprint); no Dockerfile | No connected Render tool, no CLI, no API token in environment | **BLOCKED** (access), config prepared |
+| Vercel frontend | `frontend/vercel.json` now present (added by this sprint) | No connected Vercel tool, no CLI, no API token in environment | **BLOCKED** (access), config prepared |
 | Supabase database | Local `.env` with DSN and keys (untracked, gitignored) | Reachable, PostgreSQL 17.12 + PostGIS 3.3.7 | **REACHABLE** (dev-profile credentials) |
 | GitHub Actions | `.github/workflows/verify.yml` (test/build/safety only) | Header explicitly states it never deploys and never touches production | **NO DEPLOY JOB** |
 | Deployment URLs | None in tracked files; `PHASE14_BASELINE.md` records `NOT_ASSESSED` | — | **ABSENT** |
@@ -58,8 +58,8 @@ deployment credentials are present in the shell environment.
 
 | ID | Blocker | Severity | Evidence |
 | --- | --- | --- | --- |
-| B1 | No Render access or service definition | Critical | no CLI/connector/token; no `render.yaml`; no deployment URL |
-| B2 | No Vercel access or project definition | Critical | no CLI/connector/token; no `vercel.json`; no deployment URL |
+| B1 | No Render access | Critical | no CLI/connector/token; blueprint `render.yaml` prepared but not applied; no deployment URL |
+| B2 | No Vercel access | Critical | no CLI/connector/token; `frontend/vercel.json` prepared but not applied; no deployment URL |
 | B3 | No verified backup or tested restore | Critical | `docs/operations/PHASE13_BACKUP_RECOVERY.md:61-67`; no `pg_dump`, no backup artifacts, no provider verification |
 | B4 | Live schema 2 revisions behind code | Critical | live DB `0022`, code head `0024`; Phase 12/14 tables absent |
 | B5 | Local credentials are development-profile | High | `APP_ENV=development`, `DEBUG=true`, CORS `localhost` only in `backend/.env` |
