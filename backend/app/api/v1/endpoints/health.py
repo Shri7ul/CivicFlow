@@ -123,7 +123,10 @@ def dependencies(response: Response) -> DependencyHealthResponse:
     database = (
         "reachable" if check.reachable else "not_configured" if not check.configured else "unreachable"
     )
-    auth_configured = bool(settings.supabase_url and settings.supabase_jwks_url)
+    # JWKS URL is optional config: it is derived from SUPABASE_URL when not
+    # explicitly set. Use the effective value so a correctly configured
+    # deployment is not reported as degraded.
+    auth_configured = bool(settings.supabase_url and settings.supabase_jwks_url_value)
     degraded = database != "reachable" or not auth_configured
     if degraded:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

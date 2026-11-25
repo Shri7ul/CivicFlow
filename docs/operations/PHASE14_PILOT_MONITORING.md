@@ -6,8 +6,9 @@ Status: **WORKFLOW IMPLEMENTED / NO ACTIVE PILOT TO MONITOR**
 
 The Phase 14 monitoring view is composed of existing and new sources:
 
-- existing `/health/live`, `/health/ready`, `/health/dependencies` and structured
-  request logs with `X-Request-ID` (Phase 13);
+- existing `/api/v1/health`, `/api/v1/health/ready`, `/api/v1/health/database`
+  and `/api/v1/health/dependencies` plus structured request logs with
+  `X-Request-ID` (Phase 13); there is no `/health/live` route;
 - existing `/operations/dashboard`, alerts, data-quality and ingestion status;
 - new `PilotIncident` records with severity and state (migration `0024`);
 - new final readiness gate at `/governance/phase14/readiness`;

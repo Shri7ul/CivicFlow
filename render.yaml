@@ -1,0 +1,63 @@
+# Render Blueprint for the EXISTING CivicFlow backend service.
+#
+# This file is deployment configuration only. It does not create a database:
+# the database is the existing Supabase PostgreSQL project. Do not apply this
+# blueprint to a new service if a CivicFlow service already exists on Render —
+# reconcile these values with the existing service in the dashboard instead.
+#
+# Secrets are intentionally NOT stored here. Every env var with `sync: false`
+# must be supplied through the Render dashboard (or an authenticated Render
+# API/CLI session) before the service can start.
+
+databases: []
+
+services:
+  - type: web
+    name: civicflow-api
+    runtime: python
+    plan: starter
+    region: singapore
+    branch: main
+    rootDir: backend
+    buildCommand: |
+      python -m pip install --upgrade pip
+      python -m pip install -e .
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: API_V1_PREFIX
+        value: /api/v1
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECURITY_HEADERS_ENABLED
+        value: "true"
+      - key: API_DOCS_ENABLED
+        value: "false"
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      # Set to the exact Vercel production origin(s), never "*".
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CORS_ALLOW_CREDENTIALS
+        value: "true"
+      # Secrets — supply in the Render dashboard, never in this file or Git.
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_AUDIENCE
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        sync: false

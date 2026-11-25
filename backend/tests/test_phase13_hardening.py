@@ -159,6 +159,30 @@ def test_dependency_endpoint_reports_booleans_only(client: TestClient) -> None:
     assert body["database"] in {"reachable", "unreachable", "not_configured"}
 
 
+def test_dependency_endpoint_accepts_derived_jwks_url(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SUPABASE_JWKS_URL is optional; a derived JWKS URL must count as configured."""
+    settings = Settings(
+        database_url=None,
+        supabase_url="https://project.supabase.co",
+        supabase_jwks_url=None,
+    )
+    assert settings.supabase_jwks_url is None
+    assert settings.supabase_jwks_url_value is not None
+    monkeypatch.setattr(health_endpoint, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        health_endpoint,
+        "check_database",
+        lambda: DatabaseCheck(
+            configured=True, reachable=True, message="Database connection is available."
+        ),
+    )
+    response = client.get("/api/v1/health/dependencies")
+    assert response.status_code == 200
+    assert response.json()["auth_verification_configured"] is True
+
+
 # --- production configuration ----------------------------------------------
 
 
