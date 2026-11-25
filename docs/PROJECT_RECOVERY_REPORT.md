@@ -128,11 +128,19 @@ No security control was weakened. Geolocation was enabled narrowly (`self`) and 
 
 ## 18. Commit hashes
 
-Recorded after commit in section 18 of the final chat report; the implementation is committed in logical groups (audit/docs, backend, frontend/tests).
+| Commit | Subject |
+| --- | --- |
+| `ce3f4ee` | `docs(audit): add full project audit and verified baseline` |
+| `014441f` | `fix(api): honour declared request and response contracts` |
+| `240b7d4` | `fix(frontend): restore broken workflows and complete password recovery` |
+| `8f5af0b` | `docs(recovery): reconcile live deployment state and record results` |
+| final commit | `docs(recovery): record final commit hashes and push status` |
 
 ## 19. Push status
 
-`origin/main` — pushed only after all checks passed. Exact hash and status reported in the final chat message.
+`origin/main` — pushed only after all checks passed. The final HEAD hash and
+push result are reported in the final chat message. The live deployment still
+serves the pre-recovery build until an operator redeploys.
 
 ## 20. Exact manual actions required
 
