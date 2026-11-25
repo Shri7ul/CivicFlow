@@ -49,4 +49,25 @@ describe("fetchBackendHealth", () => {
       code: "invalid_response",
     });
   });
+
+  it("surfaces a health endpoint 503 with its status", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: { code: "not_ready", message: "Not ready" } }, 503),
+    );
+
+    await expect(fetchBackendHealth()).rejects.toMatchObject({
+      status: 503,
+      code: "not_ready",
+    });
+  });
+
+  it("surfaces a network failure as a typed health error", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+    await expect(fetchBackendHealth()).rejects.toMatchObject({
+      code: "network_error",
+    });
+  });
 });

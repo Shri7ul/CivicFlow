@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { safeNextPath } from "@/lib/auth/routing";
+import { readCallbackParameters } from "@/lib/auth/callback";
 
 type CallbackState = "working" | "error";
 
@@ -18,10 +18,9 @@ export default function AuthCallbackPage() {
     void (async () => {
       // Defer state updates out of the synchronous effect body.
       await Promise.resolve();
-      const params = new URLSearchParams(window.location.search);
-      const errorDescription = params.get("error_description");
-      const code = params.get("code");
-      const next = safeNextPath(params.get("next"));
+      const { code, errorDescription, next } = readCallbackParameters(
+        window.location.search,
+      );
       const supabase = getSupabaseBrowserClient();
 
       if (errorDescription) {

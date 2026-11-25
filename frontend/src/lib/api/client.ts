@@ -106,7 +106,16 @@ export async function apiFetch<T>(
       });
     }
 
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch {
+      // A successful HTTP status with an unparsable body is a malformed
+      // response, not a network outage or an authentication failure.
+      throw new ApiError("The API returned an invalid response.", {
+        status: response.status,
+        code: "invalid_response",
+      });
+    }
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

@@ -20,6 +20,9 @@ import {
   type UploadProgress,
 } from "@/lib/api/client";
 import { fetchCurrentProfile, provisionProfile } from "@/lib/api/auth";
+import { profileLoadMessage } from "@/lib/api/errors";
+import { getEmailRedirectTo } from "@/lib/auth/redirect";
+import { authorizationHeader, requireAccessToken } from "@/lib/auth/session";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { AuthStatus, AuthUser, Profile } from "@/types/auth";
@@ -64,10 +67,7 @@ function userFromSession(session: Session | null): AuthUser | null {
 }
 
 function loginError(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  return "Unable to load your CivicFlow profile. Please try again.";
+  return profileLoadMessage(error);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -201,10 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: {
           data: fullName?.trim() ? { full_name: fullName.trim() } : undefined,
-          emailRedirectTo:
-            typeof window === "undefined"
-              ? undefined
-              : `${window.location.origin}/auth/callback`,
+          emailRedirectTo: getEmailRedirectTo(),
         },
       });
       if (signUpError) {
@@ -226,15 +223,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const apiRequest = useCallback(
     async <T,>(path: string, options: ApiRequestOptions = {}): Promise<T> => {
-      const token = sessionRef.current?.access_token;
-      if (!token) {
-        throw new ApiError(
-          "Your session has expired. Please sign in again.",
-          { status: 401, code: "not_authenticated" },
-        );
-      }
+      const token = requireAccessToken(sessionRef.current?.access_token);
       const headers = new Headers(options.headers);
-      headers.set("Authorization", `Bearer ${token}`);
+      Object.entries(authorizationHeader(token)).forEach(([name, value]) => {
+        headers.set(name, value);
+      });
       return apiFetch<T>(path, { ...options, headers });
     },
     [],
@@ -246,30 +239,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       formData: FormData,
       onProgress?: UploadProgress,
     ): Promise<T> => {
-      const token = sessionRef.current?.access_token;
-      if (!token) {
-        throw new ApiError(
-          "Your session has expired. Please sign in again.",
-          { status: 401, code: "not_authenticated" },
-        );
-      }
+      const token = requireAccessToken(sessionRef.current?.access_token);
       return uploadFormData<T>(path, formData, token, { onProgress });
     },
     [],
   );
 
   const refreshProfile = useCallback(async () => {
-    const token = sessionRef.current?.access_token;
-    if (!token) {
-      clearSessionState();
-      return;
-    }
-    setError(null);
     try {
+      const token = requireAccessToken(sessionRef.current?.access_token);
+      setError(null);
       const nextProfile = await fetchCurrentProfile(token);
       setProfile(nextProfile);
       setStatus("authenticated");
     } catch (refreshError) {
+      if (refreshError instanceof ApiError && refreshError.status === 401) {
+        await getSupabaseBrowserClient()?.auth.signOut();
+        clearSessionState();
+        return;
+      }
       setError(loginError(refreshError));
       setStatus("error");
     }
