@@ -1,5 +1,12 @@
 # Production Deployment Report — Final
 
+> **Current status correction (2026-11-26 recovery sprint):** "DEPLOYMENT
+> BLOCKED" was accurate for the original sprint but is no longer the whole
+> picture. The live services are reachable (Render health 200 observed, Vercel
+> page 200 observed). No redeploy of the recovery code was performed by the
+> agent, so the deployed build is still pre-recovery. See
+> `docs/deployment/PRODUCTION_VERIFICATION.md` §0.
+
 Date: 2026-11-26 (UTC+06:00)
 Sprint: FINAL PRODUCTION DEPLOYMENT & LIVE VERIFICATION
 

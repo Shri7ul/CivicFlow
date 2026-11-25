@@ -6,10 +6,32 @@ Repository state during verification: branch `main`, HEAD
 by this sprint, listed in the final report).
 
 This record distinguishes **live infrastructure evidence** from **local
-verification**. No deployed Render or Vercel service was reachable, so no
-production HTTP verification was possible.
+verification**. The original 2026-11-25 window below is retained as a
+point-in-time record; the update immediately following supersedes its claims
+about deployment availability.
 
-## 1. Verified: Supabase (live, read-only)
+## 0. Recovery sprint update — 2026-11-26
+
+**The deployment is live.** The original statement "no deployed Render or
+Vercel service was reachable, so no production HTTP verification was possible"
+was true of that verification window and is **no longer true**.
+
+| Check | Result |
+| --- | --- |
+| `https://civic-flow-lilac.vercel.app` | **200**; real rendered CivicFlow page with CSP/HSTS headers |
+| `https://civicflow-8dol.onrender.com/api/v1/health` | **200** `{"status":"healthy","environment":"production","version":"v1"}` observed during this sprint's read-only audit |
+| `GET /api/v1/health/dependencies` | **200** `database: reachable`, `auth_verification_configured: true`, build `0.11.0` |
+| `GET /docs` | **404** (API docs correctly disabled in production) |
+| Repeat probe of the backend during this sprint | Render Free **cold-start interstitial** (service waking). This is a platform behaviour on the free plan, not an application failure; retry after wake. |
+| Live frontend content | Still serves the **pre-recovery build** ("Phase 13", "Phase 5", "35 tables"). The fixes in this sprint are local and require a redeploy. |
+
+**Corrected verdict for the current state:** deployed services are **REACHABLE
+and PARTIALLY VERIFIED** (read-only HTTP only). They are **NOT YET VERIFIED
+AGAINST THIS SPRINT'S CODE**, because no Render/Vercel redeploy was performed
+by the agent. No authenticated production request, browser E2E, production
+database query, migration, or data write was performed.
+
+## 1. Verified: Supabase (live, read-only) — historical window
 
 | Check | Result |
 | --- | --- |
@@ -87,11 +109,11 @@ No pilot was created, approved or activated. No ground truth was promoted.
 
 | Item | Reason |
 | --- | --- |
-| Render backend deployment | No connected Render tool, CLI or API token; no existing service identity available |
-| Vercel frontend deployment | No connected Vercel tool, CLI or API token; no existing project identity available |
-| Production backend URL | None exists in tracked files or accessible configuration |
-| Production frontend URL | None exists in tracked files or accessible configuration |
-| Browser-based E2E (login, navigation, console errors) | Requires a deployed site; no browser verification was performed |
+| Render backend deployment of *this sprint's code* | No connected Render tool, CLI or API token; live service exists but was not redeployed by the agent |
+| Vercel frontend deployment of *this sprint's code* | No connected Vercel tool, CLI or API token; live site exists but still serves the pre-recovery build |
+| Production backend URL | `https://civicflow-8dol.onrender.com` (verified reachable; see section 0) |
+| Production frontend URL | `https://civic-flow-lilac.vercel.app` (verified reachable; see section 0) |
+| Browser-based E2E (login, navigation, console errors) | No browser automation with a real account was executed; only read-only HTTP GETs |
 | Authenticated API E2E | No authorized test token/account; none was created |
 | Backup existence and restore drill | No `pg_dump`, no provider access, no backup artifact |
 | Migration 0023/0024 applied to live DB | Blocked by unverified backup and missing authorization |
@@ -100,6 +122,10 @@ No pilot was created, approved or activated. No ground truth was promoted.
 
 ## 7. Verdict
 
-Live infrastructure **Supabase**: REACHABLE and inspected read-only.
+Live infrastructure **Supabase**: REACHABLE and inspected read-only (historical window).
 Application **local process**: VERIFIED against the live database.
-Deployed production services: **NOT VERIFIED — DEPLOYMENT BLOCKED**.
+Deployed production services: **REACHABLE / PARTIALLY VERIFIED** — live HTTP
+probes succeeded, but the deployment still runs the pre-recovery build and no
+authenticated or browser E2E was performed.
+Recovery sprint code: **LOCALLY VERIFIED ONLY** — redeploy required before any
+production claim can be made about these fixes.

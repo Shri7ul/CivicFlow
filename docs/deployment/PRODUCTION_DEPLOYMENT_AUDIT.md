@@ -1,5 +1,12 @@
 # Production Deployment Audit
 
+> **Current status correction (2026-11-26 recovery sprint):** statements below
+> that no deployed service was reachable reflect the original audit window only.
+> Both platforms are now verified reachable by read-only HTTP:
+> `https://civicflow-8dol.onrender.com/api/v1/health` (200 in this sprint) and
+> `https://civic-flow-lilac.vercel.app` (200). The deployed frontend still serves
+> a pre-recovery build. See `docs/deployment/PRODUCTION_VERIFICATION.md` §0.
+
 Date: 2026-11-26
 Method: direct inspection of the current worktree, Git history, tracked files,
 local (untracked) environment files, and read-only queries against the

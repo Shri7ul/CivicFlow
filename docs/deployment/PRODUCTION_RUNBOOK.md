@@ -1,5 +1,12 @@
 # Production Runbook
 
+> **Current status correction (2026-11-26 recovery sprint):** platform access is
+> still unavailable to the agent, but the deployed services are live and
+> reachable: backend `https://civicflow-8dol.onrender.com`, frontend
+> `https://civic-flow-lilac.vercel.app`. The deployed build predates the
+> recovery fixes. Verify current service identity in the dashboards before
+> following these procedures. See `docs/deployment/PRODUCTION_VERIFICATION.md` §0.
+
 Status: **PROCEDURES PREPARED / PLATFORMS NOT ACCESSED FROM THIS ENVIRONMENT**
 
 This runbook describes how an operator with authorized Render, Vercel and

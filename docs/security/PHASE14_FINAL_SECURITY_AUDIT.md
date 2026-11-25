@@ -1,8 +1,15 @@
 # Phase 14 — Final Security and Adversarial Audit
 
+> **Current status correction (2026-11-26 recovery sprint):** live web-layer
+> probing is now possible. Read-only HTTP GETs confirmed the Render health and
+> dependencies endpoints returning 200 and the Vercel page returning 200 with
+> CSP/HSTS headers. No authenticated production request was made, so role and
+> data-layer enforcement remain verified by local tests, not browser E2E. See
+> `docs/deployment/PRODUCTION_VERIFICATION.md` §0.
+
 Date: 2026-11-25. Scope: repository implementation plus read-only live
-database inspection. No production HTTP endpoint was available; live web-layer
-verification is NOT_ASSESSED.
+database inspection. No production HTTP endpoint was available at the time;
+live web-layer verification was NOT_ASSESSED in the original window.
 
 ## 1. Controls verified in code and automated tests
 
