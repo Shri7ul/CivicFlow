@@ -203,7 +203,7 @@ def risk_config(
 
 @router.get(
     "/cells",
-    response_model=None,
+    response_model=RiskCellsResponse | RiskGeoJSONResponse,
     summary="H3 risk cells with factors, trends, and infrastructure exposure",
 )
 def risk_cells(

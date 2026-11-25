@@ -146,7 +146,10 @@ def create_observation(
 
 
 def submit_observation(
-    session: Session, observation: FieldObservation, actor: AuthenticatedUser
+    session: Session,
+    observation: FieldObservation,
+    actor: AuthenticatedUser,
+    note: str | None = None,
 ) -> FieldObservation:
     session.refresh(observation, with_for_update=True)
     if observation.status != FieldObservationStatus.DRAFT:
@@ -162,7 +165,7 @@ def submit_observation(
     previous = observation.status
     observation.status = FieldObservationStatus.SUBMITTED
     observation.submitted_at = _now()
-    _event(session, observation, "SUBMITTED", previous, actor)
+    _event(session, observation, "SUBMITTED", previous, actor, note=note)
     session.commit()
     return observation
 

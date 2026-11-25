@@ -1,7 +1,9 @@
 """Phase 10 controlled-pilot, review, readiness and traceability APIs.
 
-All routes are staff-only. Mutating governance routes require ADMIN. Reads never
-change a model, score, review decision, or operational resource.
+All routes are staff-only. Reads require WORKER; most mutating governance
+routes require ADMIN, with review-case creation, review decisions and
+correlation-review decisions available to WORKER by design. Reads never change
+a model, score, review decision, or operational resource.
 """
 
 from __future__ import annotations

@@ -281,9 +281,12 @@ def run_correlation(
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[Session, Depends(get_db_session)],
 ) -> dict:
-    experiment = run_correlation_experiment(
-        session, settings=settings, actor_id=user.profile.id
-    )
+    try:
+        experiment = run_correlation_experiment(
+            session, settings=settings, actor_id=user.profile.id
+        )
+    except ValidationError as error:
+        raise AppError(str(error), status_code=422, code=error.code) from error
     return _serialize_experiment(experiment, detail=True)
 
 
@@ -293,9 +296,12 @@ def run_decision(
     settings: Annotated[Settings, Depends(get_settings)],
     session: Annotated[Session, Depends(get_db_session)],
 ) -> dict:
-    experiment = run_decision_experiment(
-        session, settings=settings, actor_id=user.profile.id
-    )
+    try:
+        experiment = run_decision_experiment(
+            session, settings=settings, actor_id=user.profile.id
+        )
+    except ValidationError as error:
+        raise AppError(str(error), status_code=422, code=error.code) from error
     return _serialize_experiment(experiment, detail=True)
 
 

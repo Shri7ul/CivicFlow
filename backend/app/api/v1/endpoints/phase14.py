@@ -226,9 +226,8 @@ def submit_observation(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> dict:
     row = _observation_or_404(session, observation_id)
-    del payload
     try:
-        row = observations.submit_observation(session, row, user)
+        row = observations.submit_observation(session, row, user, note=payload.note)
     except GovernanceError as error:
         _fail(error)
     return serialization.serialize_observation(row, events=observations.events_for(session, row.id))

@@ -47,12 +47,6 @@ def provision_profile(
         return existing, False
 
     name = (full_name or "").strip() or _default_full_name(email)
-    if not name:
-        raise AppError(
-            "A non-empty full name is required.",
-            status_code=422,
-            code="invalid_profile",
-        )
 
     profile = Profile(
         id=subject,
