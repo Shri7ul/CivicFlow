@@ -26,6 +26,7 @@ Last updated: 2026-11-25
 | Phase 10 — research-to-operations readiness | COMPLETE — committed | Migrations `0018`/`0019`, controlled pilot lifecycle, human review, traceability/export, correlation review with explicit provenance, metadata registry, simulation audit, readiness gate, `/pilot` workspace, live API/browser checks |
 | Phase 11 — real ground truth and urban data integration | COMPLETE — ready for review | Migrations `0020`–`0022`, hashed acquisition, 794 real NYC bridge assets, fresh Q3 2026 NYC 311 validation, ground-truth/reference-universe APIs, 16-category readiness, `/pilot` Evidence workspace, live RLS checks |
 | Phase 12 — Dhaka localization and pilot preparation | IMPLEMENTED — pilot BLOCKED | Migration `0023`, central `US-NYC`/`BD-DHAKA` registry, geography-scoped workspace APIs, one real bounded Dhaka OSM research acquisition (511 features), Dhaka readiness view, field/correlation/validation protocols, pilot SOP, 8 development docs; no pilot or model activation |
+| Phase 13 — production hardening and Dhaka evidence readiness | IMPLEMENTED — live deployment BLOCKED | Security audit + fixes (request IDs, security headers, production docs gating, in-process rate limiting), backend/frontend hardening, dependency and readiness health endpoints, geographic isolation matrix, CI verification workflow, migration `0023` pre-deployment inspection, backup/monitoring/Dhaka-readiness docs; no model or pilot activation |
 
 Phase 3 was committed and pushed as `69cf003`
 (`feat(civicflow): complete phase 3 spatial intelligence`). Phase 4 was committed
@@ -42,6 +43,18 @@ selection, authoritative sources, ground truth, correlation labels and external
 validation remain BLOCKED. The live database was only inspected read-only and
 remains at migration head `0022_snapshot_provenance`; `0023` is a local additive
 migration pending deployment approval.
+
+Phase 13 hardened the running application without activating anything. The
+security audit, baseline, backup/recovery, monitoring and Dhaka evidence
+readiness reports are in `docs/security/PHASE13_SECURITY_AUDIT.md`,
+`docs/development/PHASE13_BASELINE.md`,
+`docs/operations/PHASE13_BACKUP_RECOVERY.md`,
+`docs/operations/PHASE13_MONITORING.md` and
+`docs/dhaka/DHAKA_EVIDENCE_READINESS_PHASE13.md`. Migration `0023` was reviewed
+and a read-only pre-deployment inspection confirmed schema compatibility, but
+live deployment remains BLOCKED: no verified backup and no deployment
+authorization. No external monitoring vendor, deployment platform or CI secret
+was introduced. The CI workflow is `/.github/workflows/verify.yml`.
 
 ## Phase 4 implementation checklist
 

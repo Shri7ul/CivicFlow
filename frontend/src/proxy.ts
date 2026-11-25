@@ -34,5 +34,7 @@ export const config = {
     "/risk/:path*",
     "/decisions/:path*",
     "/operations/:path*",
+    "/validation/:path*",
+    "/pilot/:path*",
   ],
 };

@@ -65,6 +65,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# --- Local database exports and dumps (never commit operational data) ---
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+
 # --- Deployment ---
 .vercel
 

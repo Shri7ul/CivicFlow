@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = "INFO"
 
+    # Production hardening (Phase 13)
+    security_headers_enabled: bool = True
+    api_docs_enabled: bool = True
+    rate_limit_enabled: bool | None = None  # None => follows is_production
+    rate_limit_requests_per_minute: int = Field(default=120, ge=10, le=10000)
+
     # CORS
     cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: list(_DEFAULT_CORS_ORIGINS)
@@ -381,6 +387,20 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def rate_limiting_active(self) -> bool:
+        """Rate limiting is on in production unless explicitly overridden."""
+        if self.rate_limit_enabled is None:
+            return self.is_production
+        return self.rate_limit_enabled
+
+    @property
+    def docs_effective_enabled(self) -> bool:
+        """Interactive API docs are disabled by default in production."""
+        if self.is_production:
+            return self.api_docs_enabled and self.debug
+        return self.api_docs_enabled
 
     @property
     def service_name(self) -> str:
