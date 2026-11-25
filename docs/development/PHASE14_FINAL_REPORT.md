@@ -190,11 +190,18 @@ Docs: ten Phase 14 documents plus roadmap/progress/README updates.
 
 ## 21. Git commit
 
-Recorded after commit in the final verification log.
+- Commit: `3a03b5d9e14d2870a6353e2a47786e87707824dd`
+  (`feat(civicflow): implement phase 14 controlled pilot controls`).
+- Branch: `main`. Remote: `origin` (GitHub `Shri7ul/CivicFlow`).
+- Worktree at commit time: clean after staging the complete Phase 14 change set.
 
 ## 22. Push status
 
-Recorded after push in the final verification log.
+- `git push origin main` succeeded: `935ec0f..3a03b5d  main -> main`.
+- Remote `main` verified after push: `3a03b5d9e14d2870a6353e2a47786e87707824dd`.
+- No force-push was used. Working tree clean after push.
+- A follow-up documentation-only commit may record this verification state; it
+  does not alter any implementation or readiness status.
 
 ## 23. Final operational verdict
 
