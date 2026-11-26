@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     reviews,
     risk,
     validation,
+    workforce,
 )
 
 api_router = APIRouter()
@@ -62,3 +63,4 @@ api_router.include_router(
     phase14.router, prefix="/governance/phase14", tags=["phase14-pilot-controls"]
 )
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
+api_router.include_router(workforce.router, prefix="/workforce", tags=["workforce"])

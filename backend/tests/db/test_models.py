@@ -89,6 +89,12 @@ EXPECTED_TABLES = {
     "pilot_shutdowns",
     "phase14_attestations",
     "phase14_attestation_events",
+    "worker_applications",
+    "worker_profiles",
+    "incident_assignments",
+    "incident_assignment_events",
+    "workforce_events",
+    "workforce_notifications",
 }
 
 

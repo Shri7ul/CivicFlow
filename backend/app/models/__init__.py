@@ -136,6 +136,17 @@ from app.models.phase14 import (
     PilotShutdown,
     DHAKA_MODEL_READINESS_LEVEL,
 )
+from app.models.workforce import (
+    AssignmentStatus,
+    IncidentAssignment,
+    IncidentAssignmentEvent,
+    WorkerApplication,
+    WorkerApplicationStatus,
+    WorkerProfile,
+    WorkerStatus,
+    WorkforceEvent,
+    WorkforceNotification,
+)
 
 __all__ = [
     "GeographicContextRecord",
@@ -259,4 +270,13 @@ __all__ = [
     "PilotIncident",
     "PilotIncidentEvent",
     "PilotShutdown",
+    "AssignmentStatus",
+    "IncidentAssignment",
+    "IncidentAssignmentEvent",
+    "WorkerApplication",
+    "WorkerApplicationStatus",
+    "WorkerProfile",
+    "WorkerStatus",
+    "WorkforceEvent",
+    "WorkforceNotification",
 ]

@@ -38,19 +38,60 @@ _POINT_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Staff may move an incident forward, but not skip resolution/closure steps.
+# Single incident state machine. The legacy staff path
+# (OPEN → ACKNOWLEDGED → IN_PROGRESS → RESOLVED → CLOSED) is preserved, and the
+# workforce path extends it without creating a separate state model.
 ALLOWED_TRANSITIONS: dict[IncidentStatus, frozenset[IncidentStatus]] = {
     IncidentStatus.OPEN: frozenset(
-        {IncidentStatus.ACKNOWLEDGED, IncidentStatus.IN_PROGRESS}
+        {
+            IncidentStatus.ACKNOWLEDGED,
+            IncidentStatus.IN_PROGRESS,
+            IncidentStatus.VERIFIED,
+        }
+    ),
+    IncidentStatus.VERIFIED: frozenset(
+        {IncidentStatus.ASSIGNED, IncidentStatus.OPEN}
+    ),
+    IncidentStatus.ASSIGNED: frozenset(
+        {IncidentStatus.ACCEPTED, IncidentStatus.VERIFIED}
+    ),
+    IncidentStatus.ACCEPTED: frozenset(
+        {IncidentStatus.IN_PROGRESS, IncidentStatus.ASSIGNED}
     ),
     IncidentStatus.ACKNOWLEDGED: frozenset({IncidentStatus.IN_PROGRESS}),
-    IncidentStatus.IN_PROGRESS: frozenset({IncidentStatus.RESOLVED}),
+    IncidentStatus.IN_PROGRESS: frozenset(
+        {
+            IncidentStatus.RESOLVED,
+            IncidentStatus.COMPLETION_SUBMITTED,
+            IncidentStatus.ASSIGNED,
+        }
+    ),
+    IncidentStatus.COMPLETION_SUBMITTED: frozenset(
+        {
+            IncidentStatus.VERIFIED_COMPLETED,
+            IncidentStatus.IN_PROGRESS,
+            IncidentStatus.ASSIGNED,
+        }
+    ),
+    IncidentStatus.VERIFIED_COMPLETED: frozenset(
+        {IncidentStatus.RESOLVED, IncidentStatus.IN_PROGRESS}
+    ),
     IncidentStatus.RESOLVED: frozenset({IncidentStatus.CLOSED}),
     IncidentStatus.CLOSED: frozenset(),
 }
 
 _DEPARTMENT_REQUIRED = frozenset(
     {IncidentStatus.ACKNOWLEDGED, IncidentStatus.IN_PROGRESS}
+)
+
+# The workforce path carries authorization through the assignment record, so a
+# department is not required for these forward transitions.
+_WORKFORCE_PROGRESSION = frozenset(
+    {
+        IncidentStatus.ACCEPTED,
+        IncidentStatus.COMPLETION_SUBMITTED,
+        IncidentStatus.VERIFIED_COMPLETED,
+    }
 )
 
 
@@ -265,7 +306,11 @@ def transition_incident(
             )
         incident.assigned_department_id = department.id
 
-    if target in _DEPARTMENT_REQUIRED and incident.assigned_department_id is None:
+    if (
+        target in _DEPARTMENT_REQUIRED
+        and incident.status not in _WORKFORCE_PROGRESSION
+        and incident.assigned_department_id is None
+    ):
         raise AppError(
             "Assign an active department before acknowledging or starting work.",
             status_code=422,
