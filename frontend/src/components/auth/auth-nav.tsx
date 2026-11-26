@@ -18,10 +18,41 @@ const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard" },
 ] as const;
 
-export function AuthNav({ compact = false }: { compact?: boolean }) {
-  const { status, profile, signOut } = useAuth();
+/** Shared by the full app shell and the compact public landing header. */
+function SignOutControl() {
+  const { signOut } = useAuth();
   const router = useRouter();
   const [pending, setPending] = useState(false);
+
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => {
+        setPending(true);
+        // Leave the protected shell before the auth state change can
+        // trigger the dashboard guard's login redirect.
+        router.push("/");
+        void signOut().finally(() => {
+          setPending(false);
+          router.refresh();
+        });
+      }}
+      className="rounded-lg px-2 py-2 text-xs font-medium text-muted transition hover:text-foreground disabled:opacity-60 sm:text-sm"
+    >
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
+
+type AuthNavProps = {
+  compact?: boolean;
+  /** Show only the workspace entry and sign-out on a public product header. */
+  minimal?: boolean;
+};
+
+export function AuthNav({ compact = false, minimal = false }: AuthNavProps) {
+  const { status, profile } = useAuth();
 
   if (status === "loading") {
     return (
@@ -33,10 +64,27 @@ export function AuthNav({ compact = false }: { compact?: boolean }) {
   }
 
   if (status === "authenticated" && profile) {
+    if (minimal) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="hidden text-right text-[11px] leading-4 text-muted xl:block">
+            {roleLabel(profile.role)}
+          </span>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-xs font-medium text-accent transition hover:bg-accent/15 sm:text-sm"
+          >
+            Workspace
+          </Link>
+          <SignOutControl />
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center gap-2">
         {!compact ? (
-          <span className="hidden text-right text-[11px] leading-4 text-slate-400 lg:block">
+          <span className="hidden text-right text-[11px] leading-4 text-muted lg:block">
             <span className="block font-medium text-slate-200">
               {profile.full_name}
             </span>
@@ -50,7 +98,7 @@ export function AuthNav({ compact = false }: { compact?: boolean }) {
             <Link
               key={item.path}
               href={item.path}
-              className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/15 sm:px-3 sm:text-sm"
+              className="rounded-lg border border-accent/25 bg-accent/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-accent/15 sm:px-3 sm:text-sm"
             >
               {item.label}
             </Link>
@@ -64,23 +112,7 @@ export function AuthNav({ compact = false }: { compact?: boolean }) {
             </Link>
           ),
         )}
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => {
-            setPending(true);
-            // Leave the protected shell before the auth state change can
-            // trigger the dashboard guard's login redirect.
-            router.push("/");
-            void signOut().finally(() => {
-              setPending(false);
-              router.refresh();
-            });
-          }}
-          className="rounded-lg px-2 py-2 text-xs font-medium text-slate-400 transition hover:text-white disabled:opacity-60 sm:text-sm"
-        >
-          {pending ? "Signing out…" : "Sign out"}
-        </button>
+        <SignOutControl />
       </div>
     );
   }
