@@ -8,7 +8,11 @@ const DECISIONS_PATH = "/decisions";
 const OPERATIONS_PATH = "/operations";
 const VALIDATION_PATH = "/validation";
 const PILOT_PATH = "/pilot";
+const ADMIN_PATH = "/admin";
+const WORKER_PATH = "/worker";
+const WORKFORCE_PREFIX = "/workforce";
 const LOGIN_PATH = "/login";
+
 const PROTECTED_PREFIXES = [
   DASHBOARD_PREFIX,
   INCIDENTS_PREFIX,
@@ -18,6 +22,9 @@ const PROTECTED_PREFIXES = [
   OPERATIONS_PATH,
   VALIDATION_PATH,
   PILOT_PATH,
+  ADMIN_PATH,
+  WORKER_PATH,
+  WORKFORCE_PREFIX,
 ] as const;
 
 export function isProtectedPath(pathname: string): boolean {
@@ -66,32 +73,44 @@ export function hasSupabaseAuthCookie(cookies: readonly CookieLike[]): boolean {
 
 /**
  * Navigation paths a role can actually use. This is UX only: the backend
- * independently enforces every permission. Citizens are shown only modules
- * whose backend endpoints accept an active CITIZEN profile.
+ * independently enforces every permission. Each operational surface is
+ * reachable only by the role that owns it.
  */
 export function navigationForRole(role: ProfileRole): readonly string[] {
-  const common = [
-    DASHBOARD_PREFIX,
-    INCIDENTS_PREFIX,
-    MAP_PATH,
-    RISK_PATH,
-  ];
-  if (role === "CITIZEN") {
-    return common;
+  switch (role) {
+    case "ADMIN":
+      return [
+        ADMIN_PATH,
+        OPERATIONS_PATH,
+        DECISIONS_PATH,
+        VALIDATION_PATH,
+        PILOT_PATH,
+      ];
+    case "WORKER":
+      return [WORKER_PATH, `${WORKFORCE_PREFIX}/status`];
+    default:
+      return [
+        DASHBOARD_PREFIX,
+        INCIDENTS_PREFIX,
+        MAP_PATH,
+        RISK_PATH,
+        `${WORKFORCE_PREFIX}/apply`,
+        `${WORKFORCE_PREFIX}/status`,
+      ];
   }
-  return [
-    ...common,
-    DECISIONS_PATH,
-    OPERATIONS_PATH,
-    VALIDATION_PATH,
-    PILOT_PATH,
-  ];
 }
 
 export function canAccessPath(role: ProfileRole, pathname: string): boolean {
   return navigationForRole(role).some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+/** Landing page for each role after login or a failed route guard. */
+export function homePathForRole(role: ProfileRole): string {
+  if (role === "ADMIN") return ADMIN_PATH;
+  if (role === "WORKER") return WORKER_PATH;
+  return DASHBOARD_PREFIX;
 }
 
 export function roleLabel(role: ProfileRole): string {

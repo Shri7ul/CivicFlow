@@ -33,6 +33,10 @@ describe("protected routing", () => {
     expect(isProtectedPath("/validation/evidence")).toBe(true);
     expect(isProtectedPath("/pilot")).toBe(true);
     expect(isProtectedPath("/pilot/geography")).toBe(true);
+    expect(isProtectedPath("/workforce/apply")).toBe(true);
+    expect(isProtectedPath("/workforce/status")).toBe(true);
+    expect(isProtectedPath("/admin")).toBe(true);
+    expect(isProtectedPath("/worker")).toBe(true);
     expect(isProtectedPath("/login")).toBe(false);
   });
 
@@ -67,20 +71,45 @@ describe("role-aware navigation", () => {
     expect(paths).not.toContain("/decisions");
     expect(paths).not.toContain("/operations");
     expect(paths).not.toContain("/validation");
+    expect(paths).not.toContain("/admin");
+    expect(paths).not.toContain("/worker");
+    expect(paths).toContain("/workforce/apply");
+    expect(paths).toContain("/workforce/status");
     expect(canAccessPath("CITIZEN", "/operations")).toBe(false);
     expect(canAccessPath("CITIZEN", "/validation/report")).toBe(false);
+    expect(canAccessPath("CITIZEN", "/admin")).toBe(false);
+    expect(canAccessPath("CITIZEN", "/worker")).toBe(false);
     expect(canAccessPath("CITIZEN", "/incidents/123")).toBe(true);
+    expect(canAccessPath("CITIZEN", "/workforce/apply")).toBe(true);
+    expect(canAccessPath("CITIZEN", "/workforce/status")).toBe(true);
   });
 
-  it("shows staff modules to workers and admins", () => {
-    for (const role of ["WORKER", "ADMIN"] as const) {
-      const paths = navigationForRole(role);
-      expect(paths).toContain("/decisions");
-      expect(paths).toContain("/operations");
-      expect(paths).toContain("/validation");
-      expect(paths).toContain("/pilot");
-      expect(canAccessPath(role, "/operations/alerts")).toBe(true);
-    }
+  it("shows only the municipal control plane to admins", () => {
+    const paths = navigationForRole("ADMIN");
+    expect(paths).toContain("/admin");
+    expect(paths).toContain("/operations");
+    expect(paths).toContain("/decisions");
+    expect(paths).toContain("/validation");
+    expect(paths).toContain("/pilot");
+    expect(paths).not.toContain("/workforce/apply");
+    expect(paths).not.toContain("/worker");
+    expect(canAccessPath("ADMIN", "/operations/alerts")).toBe(true);
+    expect(canAccessPath("ADMIN", "/admin")).toBe(true);
+    expect(canAccessPath("ADMIN", "/worker")).toBe(false);
+  });
+
+  it("shows only the field workspace to workers", () => {
+    const paths = navigationForRole("WORKER");
+    expect(paths).toContain("/worker");
+    expect(paths).toContain("/workforce/status");
+    expect(paths).not.toContain("/admin");
+    expect(paths).not.toContain("/operations");
+    expect(paths).not.toContain("/decisions");
+    expect(paths).not.toContain("/workforce/apply");
+    expect(canAccessPath("WORKER", "/worker")).toBe(true);
+    expect(canAccessPath("WORKER", "/workforce/status")).toBe(true);
+    expect(canAccessPath("WORKER", "/admin")).toBe(false);
+    expect(canAccessPath("WORKER", "/operations/alerts")).toBe(false);
   });
 });
 

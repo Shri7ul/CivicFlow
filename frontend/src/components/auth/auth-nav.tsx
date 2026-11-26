@@ -15,6 +15,10 @@ const NAV_ITEMS = [
   { path: "/operations", label: "Operations" },
   { path: "/validation", label: "Validation" },
   { path: "/pilot", label: "Pilot" },
+  { path: "/workforce/apply", label: "Apply" },
+  { path: "/workforce/status", label: "Application" },
+  { path: "/worker", label: "Worker desk" },
+  { path: "/admin", label: "Admin" },
   { path: "/dashboard", label: "Dashboard" },
 ] as const;
 

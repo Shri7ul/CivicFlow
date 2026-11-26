@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { buildLoginHref, canAccessPath } from "@/lib/auth/routing";
+import { buildLoginHref, canAccessPath, homePathForRole } from "@/lib/auth/routing";
 import { isAuthReady } from "@/lib/auth/state";
 
 function GuardFrame({ children }: { children: ReactNode }) {
@@ -39,7 +39,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     }
     // UX guard only: the backend independently enforces role permissions.
     if (profile && !canAccessPath(profile.role, pathname)) {
-      router.replace("/dashboard");
+      router.replace(homePathForRole(profile.role));
     }
   }, [pathname, profile, router, status]);
 

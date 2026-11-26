@@ -36,5 +36,8 @@ export const config = {
     "/operations/:path*",
     "/validation/:path*",
     "/pilot/:path*",
+    "/admin/:path*",
+    "/worker/:path*",
+    "/workforce/:path*",
   ],
 };
