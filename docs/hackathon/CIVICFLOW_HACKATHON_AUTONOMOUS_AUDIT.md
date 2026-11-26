@@ -326,7 +326,13 @@ This is an honest self-assessment using the rubric's own per-challenge breakdown
 - No production deployment, migration application, user creation, role change or pilot activation was performed.
 - No destructive Git operation was used. The untracked problem-statement PDF was preserved and used as the rubric source.
 - All screenshot files are under `docs/hackathon/screenshots/` and contain rendered UI only.
-- Final commit plan: separate commits for the weather backend, weather frontend, audit/docs/README, and the small footer-label fix. Push only after verification and in line with the user's deployment authorization status.
+- Final local commits on top of `b5dcb40`: `bf99d08` (weather backend),
+  `6d314ba` (weather frontend), `d6ebeab` (footer label), `e59ff33` (audit,
+  screenshots, README), `cb5db70` (duplicate-screenshot cleanup). Worktree is
+  clean; no untracked files remain; 13 canonical screenshots are committed.
+- **Push was intentionally withheld.** Pushing to `main` may trigger the
+  connected Render/Vercel auto-deployments, which would alter live systems
+  without explicit authorization. Push only after the user authorizes it.
 
 ---
 
