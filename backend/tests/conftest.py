@@ -30,6 +30,9 @@ def test_environment(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     )
     monkeypatch.setenv("CORS_ALLOW_CREDENTIALS", "true")
     monkeypatch.setenv("DATABASE_URL", "")
+    # Weather tests opt in explicitly with a mock provider; no existing test
+    # should make a real external API call.
+    monkeypatch.setenv("WEATHER_ENABLED", "false")
     get_settings.cache_clear()
     clear_engine_cache()
     yield

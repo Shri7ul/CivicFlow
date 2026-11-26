@@ -147,6 +147,8 @@ from app.models.workforce import (
     WorkforceEvent,
     WorkforceNotification,
 )
+from app.models.weather import WeatherAssessment
+from app.models.enums import WeatherAssessmentStatus
 
 __all__ = [
     "GeographicContextRecord",
@@ -279,4 +281,6 @@ __all__ = [
     "WorkerStatus",
     "WorkforceEvent",
     "WorkforceNotification",
+    "WeatherAssessment",
+    "WeatherAssessmentStatus",
 ]

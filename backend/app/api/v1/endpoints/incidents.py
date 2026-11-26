@@ -13,6 +13,8 @@ from app.auth.dependencies import (
     require_active_user,
     require_worker,
 )
+from app.core.config import Settings, get_settings
+from app.core.logging import get_logger
 from app.db.session import get_db_session
 from app.models import (
     IncidentCategory,
@@ -42,6 +44,9 @@ from app.services.incidents import (
     transition_incident,
     update_incident,
 )
+from app.weather.service import ensure_assessment
+
+logger = get_logger("incidents")
 
 router = APIRouter()
 
@@ -56,6 +61,7 @@ def report_incident(
     payload: IncidentCreate,
     user: Annotated[AuthenticatedUser, Depends(require_active_user)],
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> IncidentResponse:
     incident = create_incident(
         session,
@@ -68,6 +74,15 @@ def report_incident(
         longitude=payload.longitude,
         address=payload.address,
     )
+    # Weather context is best-effort: a provider outage must never prevent a
+    # citizen from reporting an incident. The detail view can retry later.
+    if settings.weather_enabled:
+        try:
+            ensure_assessment(session, incident, settings)
+            session.commit()
+        except Exception:
+            session.rollback()
+            logger.warning("weather assessment after incident creation failed")
     return serialize_incident(incident, include_history=True)
 
 

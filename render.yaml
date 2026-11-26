@@ -64,3 +64,14 @@ services:
         value: authenticated
       - key: SUPABASE_STORAGE_BUCKET
         value: incident-evidence
+      # Weather-aware intelligence: free non-commercial provider needs no key.
+      - key: WEATHER_ENABLED
+        value: "true"
+      - key: WEATHER_PROVIDER
+        value: open-meteo
+      - key: WEATHER_API_BASE_URL
+        value: https://api.open-meteo.com/v1/forecast
+      - key: WEATHER_CACHE_TTL_MINUTES
+        value: "30"
+      - key: WEATHER_FORECAST_HOURS
+        value: "12"

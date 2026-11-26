@@ -56,6 +56,13 @@ class WorkerStatus(str, Enum):
     SUSPENDED = "SUSPENDED"
 
 
+class WeatherAssessmentStatus(str, Enum):
+    OK = "OK"
+    STALE = "STALE"
+    ERROR = "ERROR"
+    DISABLED = "DISABLED"
+
+
 class AssignmentStatus(str, Enum):
     OFFERED = "OFFERED"
     ACCEPTED = "ACCEPTED"

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from typing import Annotated, Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -146,6 +147,25 @@ class Settings(BaseSettings):
     validation_top_k: int = Field(default=10, ge=5, le=100)
     validation_resolution: int = Field(default=9, ge=7, le=9)
 
+    # Weather-aware incident intelligence (declared challenges A02 + A06).
+    # The default provider has a free non-commercial tier and needs no key.
+    weather_enabled: bool = True
+    weather_provider: Literal["open-meteo", "mock"] = "open-meteo"
+    weather_api_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    weather_api_key: SecretStr | None = None
+    weather_timeout_s: float = Field(default=8.0, ge=1.0, le=60.0)
+    weather_max_retries: int = Field(default=2, ge=0, le=5)
+    weather_retry_backoff_s: float = Field(default=0.5, ge=0.0, le=10.0)
+    weather_cache_ttl_minutes: int = Field(default=30, ge=0, le=1440)
+    weather_forecast_hours: int = Field(default=12, ge=1, le=48)
+    weather_rule_heavy_rain_mm: float = Field(default=5.0, ge=0.0, le=200.0)
+    weather_rule_rain_probability_pct: int = Field(default=60, ge=0, le=100)
+    weather_rule_strong_wind_kmh: float = Field(default=35.0, ge=0.0, le=200.0)
+    weather_rule_strong_gust_kmh: float = Field(default=50.0, ge=0.0, le=300.0)
+    weather_rule_high_temperature_c: float = Field(
+        default=35.0, ge=-50.0, le=70.0
+    )
+
     @field_validator("app_name")
     @classmethod
     def _validate_app_name(cls, value: str) -> str:
@@ -178,6 +198,7 @@ class Settings(BaseSettings):
         "database_url",
         "supabase_anon_key",
         "supabase_service_role_key",
+        "weather_api_key",
         mode="before",
     )
     @classmethod
@@ -207,6 +228,17 @@ class Settings(BaseSettings):
             raise ValueError("Supabase URLs must start with http:// or https://")
         if value.startswith("http://") and "localhost" not in value and "127.0.0.1" not in value:
             raise ValueError("Supabase URLs must use HTTPS outside local development")
+        return value
+
+    @field_validator("weather_api_base_url")
+    @classmethod
+    def _validate_weather_url(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("WEATHER_API_BASE_URL must be an http(s) URL")
+        if parsed.scheme == "http" and "localhost" not in parsed.netloc and "127.0.0.1" not in parsed.netloc:
+            raise ValueError("WEATHER_API_BASE_URL must use HTTPS outside local development")
         return value
 
     @field_validator("database_sslmode")

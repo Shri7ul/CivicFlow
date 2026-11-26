@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     reviews,
     risk,
     validation,
+    weather,
     workforce,
 )
 
@@ -64,3 +65,4 @@ api_router.include_router(
 )
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
 api_router.include_router(workforce.router, prefix="/workforce", tags=["workforce"])
+api_router.include_router(weather.router, prefix="/weather", tags=["weather-intelligence"])

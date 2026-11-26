@@ -95,6 +95,7 @@ EXPECTED_TABLES = {
     "incident_assignment_events",
     "workforce_events",
     "workforce_notifications",
+    "weather_assessments",
 }
 
 

@@ -77,7 +77,7 @@ def test_sqlite_upgrade_and_downgrade(
     assert "incidents" in tables
     assert "role_change_audits" in tables
     assert "alembic_version" in tables
-    assert version == "0025_workforce"
+    assert version == "0026_weather_intelligence"
 
     # Every model column must exist in the migrated schema.
     engine = create_engine(f"sqlite:///{db_path.as_posix()}")
@@ -132,6 +132,7 @@ def test_migration_files_are_reproducible_and_ordered() -> None:
         "0023_phase12_geography.py",
         "0024_phase14_pilot.py",
         "0025_workforce.py",
+        "0026_weather_intelligence.py",
     ]
     assert "postgis" in (versions[0].read_text(encoding="utf-8")).lower()
     rls = versions[1].read_text(encoding="utf-8")
