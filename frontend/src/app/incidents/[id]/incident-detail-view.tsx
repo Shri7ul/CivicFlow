@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { EvidenceGallery } from "@/components/incidents/evidence-gallery";
 import { IncidentIntelligencePanel } from "@/components/incidents/incident-intelligence";
 import { SeverityBadge, StatusBadge } from "@/components/incidents/status-badge";
+import { WeatherImpactPanel } from "@/components/weather/weather-impact-panel";
 import {
   changeIncidentStatus,
   getIncident,
@@ -481,6 +482,8 @@ export function IncidentDetailView({ incidentId }: { incidentId: string }) {
         incidentId={incident.id}
         canReview={isStaff}
       />
+
+      <WeatherImpactPanel incidentId={incident.id} />
     </main>
   );
 }
