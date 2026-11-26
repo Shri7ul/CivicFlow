@@ -151,3 +151,55 @@ serves the pre-recovery build until an operator redeploys.
 5. With a real test account: register → verify email → login → provision → dashboard metrics → create incident with explicit location → view incident → forgot password → reset → logout.
 6. Re-run `backend/scripts/production_smoke_test.py` and confirm the live home page no longer shows stale phase counts.
 7. Decide separately, with backup/restore drill and explicit authorization, whether to apply migrations `0023`/`0024`.
+
+---
+
+## 21. Addendum — Admin Operations, Worker Approval & Incident Assignment Recovery Sprint (2026-11-26)
+
+This addendum records a later, separate sprint and does not rewrite the verdict or
+results above. It is evidence-based: every status below was produced by running
+the relevant command in this repository.
+
+### 21.1 Scope
+
+The prior recovery work fixed contracts and auth lifecycle defects but left no
+municipal operations layer: no worker entity, no worker approval lifecycle, no
+incident-to-worker assignment, no completion verification and no admin control
+plane. This sprint added that layer end to end.
+
+### 21.2 Evidence documents
+
+- `docs/audit/ADMIN_WORKFORCE_WORKFLOW_AUDIT.md` — Phase 0 audit of what existed
+  and could be reused, and the concrete gaps.
+- `docs/architecture/ADMIN_WORKFORCE_WORKFLOW.md` — implemented design: single
+  extended incident state machine, DB-derived roles, guarded service reuse.
+- `docs/api/WORKER_AND_ADMIN_API.md` — endpoint, schema and error-code reference.
+- `docs/security/ADMIN_WORKER_RBAC.md` — authorization boundaries and residual risks.
+- `docs/testing/ADMIN_WORKFORCE_TEST_REPORT.md` — commands, counts and defects fixed.
+- `docs/deployment/ADMIN_WORKFORCE_DEPLOYMENT.md` — migration and operator steps.
+
+### 21.3 Implemented
+
+- Backend: six workforce models, three new enums, strict schemas, application and
+  assignment services, append-only audit, in-app notifications, a new
+  `/api/v1/workforce` router, and additive migration `0025_workforce` (single head).
+- Frontend: role-aware routing/guards/nav, typed workforce API module, new routes
+  `/workforce/apply`, `/workforce/status`, `/admin`, `/worker`, and reusable
+  loading/empty/error/status presentation.
+- Security: WORKER grant goes through the existing audited role-change service;
+  incident changes go through `transition_incident()`; worker mutations enforce
+  assignment ownership; audit metadata is scrubbed and persistently stored.
+
+### 21.4 Verification (freshly executed)
+
+- Backend full suite: **330 passed, 2 warnings**.
+- Focused workforce suite: **10 passed, 1 warning**.
+- Alembic: `0025_workforce (head)`, single head.
+- Frontend: typecheck clean, lint clean, **160 tests passed**, production build
+  succeeded with all four new routes emitted.
+
+### 21.5 Not performed
+
+No production migration, production data write, user creation, role grant, pilot
+activation or Render/Vercel deployment. No live browser E2E with real accounts.
+These remain operator actions and are documented honestly in the deployment note.
