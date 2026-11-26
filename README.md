@@ -21,6 +21,25 @@ scorecard), and **Phase 11** (hashed real-data acquisition, real NYC bridge
 infrastructure, human ground-truth review, correlation reference universes,
 and fresh external validation with an evidence workspace).
 
+## Hackathon submission
+
+- **Selected track:** World Problem Solver — urban incident response and coordinated civic operations.
+- **Problem statement:** Cities receive civic incident reports without a reliable way to understand
+  spatial concentration, potential cascading impact, or response trade-offs. CivicFlow unifies
+  reporting, explainable spatial risk, governed decision support and role-aware operations in one
+  system. A weather-aware impact-assessment layer explains how observed and forecast conditions may
+  aggravate an incident without claiming causation or emitting a numeric risk score.
+- **Declared advanced challenges:** `A02 — Intelligent Decisions & Optimization` and
+  `A06 — External API & Fault Tolerance`. The evidence set, scorecard and limitations are in
+  [docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md](docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md).
+- **Source repository:** https://github.com/Shri7ul/CivicFlow
+- **Live frontend (historically documented; not re-verified in the 2026-11-27 sprint):**
+  https://civic-flow-lilac.vercel.app
+- **Live API health (historically documented; not re-verified in the 2026-11-27 sprint):**
+  https://civicflow-8dol.onrender.com/api/v1/health
+- **YouTube presentation:** not yet published. The real link must be added before submission;
+  no placeholder video is claimed.
+
 Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
 ingestion, leakage-safe rolling-origin risk backtesting against four baselines,
 sensitivity diagnostics, explicitly labelled synthetic correlation/planning
@@ -281,10 +300,11 @@ current status, verification evidence, and known boundaries.
   features, hashes in `backend/data/dhaka/MANIFEST.json`). OSM is community-mapped
   context, never authoritative or field-verified infrastructure.
 - Dhaka readiness is `NOT_READY`; pilot area selection, authoritative sources,
-  ground truth, correlation labels, validation and stakeholder approval remain
-  BLOCKED. No pilot or model activation occurred. The live database remains at
-  `0022_snapshot_provenance`; migration `0023` is local and pending deployment
-  approval.
+ground truth, correlation labels, validation and stakeholder approval remain
+BLOCKED. No pilot or model activation occurred. The live database was last
+verified at `0022_snapshot_provenance` on 2026-11-24; local migrations
+`0023_phase12_geography`, `0024_phase14_pilot`, `0025_workforce` and
+`0026_weather_intelligence` are ahead of it and pending deployment approval.
 - See [docs/development/PHASE_12_IMPLEMENTATION_REPORT.md](docs/development/PHASE_12_IMPLEMENTATION_REPORT.md)
   and the other `docs/development/PHASE_12_*.md` documents.
 
@@ -302,9 +322,27 @@ current status, verification evidence, and known boundaries.
 - No pilot was approved or activated, no model was promoted, and no civic action
   was authorized. Authoritative Dhaka boundary/data, ground truth, validation
   labels, legal/stakeholder approval and a verified restore point remain
-  BLOCKED; the live database remains at `0022_snapshot_provenance`.
+  BLOCKED; the live database was last verified at `0022_snapshot_provenance` on
+  2026-11-24, with local migrations `0023`–`0026` awaiting deployment approval.
 - See [docs/development/PHASE14_FINAL_REPORT.md](docs/development/PHASE14_FINAL_REPORT.md)
   and the other `PHASE14_*` documents.
+
+### Weather-aware incident intelligence (hackathon sprint)
+
+- Deterministic, versioned `weather-impact-v1` rule engine that explains potential aggravation
+  and secondary hazards from observed conditions and a bounded forecast. It deliberately emits
+  **no numeric risk score, no causal claim and no prediction**, and states uncertainty explicitly.
+- Provider abstraction with a live Open-Meteo implementation (free tier, no key required;
+  CC BY 4.0 attribution) and explicitly labelled `MOCK` / `PARTIAL` providers for tests.
+- Bounded retries, timeouts, HTTP 429 handling, malformed-response rejection, a TTL cache, a
+  failed-attempt retry window and stale-while-error fallback; explicit `OK`, `STALE`, `ERROR`
+  and `DISABLED` states.
+- New `weather_assessments` table, migration `0026_weather_intelligence`, RLS with SELECT-only
+  grants, ADMIN-only refresh/config endpoints and role-aware UI on the incident detail page.
+  Citizens and workers never see internal rule IDs or refresh controls; admins see rule evidence.
+- Post-incident weather assessment is best-effort and never blocks incident submission.
+- See the [autonomous audit report](docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md)
+  for the full provider, rule, API, UI, test and screenshot evidence.
 
 ### Phase 7 — operational maturity and intelligence validation
 
@@ -439,7 +477,8 @@ frontend/
   src/components/incidents/   Cards, badges, and evidence gallery
   src/components/risk/        H3 risk map, drilldown, and factors
   src/components/decisions/   Scenario dashboard, workspace, target map
-  src/lib/api/                Typed API client and auth/profile/risk/decision calls
+  src/components/weather/     Role-aware weather impact card and detail panel
+  src/lib/api/                Typed API client and auth/profile/risk/decision/weather calls
   src/lib/auth/               Route safety, role labels, cookie helper
   src/lib/supabase/           Browser client and public configuration
   src/proxy.ts                Optimistic dashboard/incident route protection
@@ -450,7 +489,7 @@ backend/
     auth/                     JWT verification and FastAPI dependencies
     core/                     Settings, logging, middleware, error handling
     db/                       Engine/session factory and health check
-    models/                   SQLAlchemy model registry (53 application tables)
+    models/                   SQLAlchemy model registry (70 application tables)
     schemas/                  Pydantic request/response schemas
     services/profiles.py      Provisioning, profile update, audited roles
     services/incidents.py     Reporting, visibility, lifecycle, serialization
@@ -465,7 +504,9 @@ backend/
     operations/               Alerts, notifications, reviews, dashboard
     evidence/                 Allowlisted acquisition, snapshots, ground truth
     validation/               Dataset registry, backtests, fresh external holdouts
+    weather/                  Provider abstraction, rule engine, assessment service
     api/v1/endpoints/risk.py  Risk cells, summary, trends, runs, config, quality
+    api/v1/endpoints/weather.py  Weather assessment, admin refresh, public config
     api/v1/endpoints/decisions.py  Scenarios, resources, simulate, compare
     api/v1/endpoints/governance.py  Models and evaluations
     api/v1/endpoints/operations.py  Sources, quality, alerts, notifications, dashboard
@@ -495,13 +536,17 @@ backend/
     versions/0020_phase11_evidence.py
     versions/0021_gt_provenance.py
     versions/0022_snapshot_provenance.py
-  tests/                      Config, DB, auth, API, migration, seed tests
+    versions/0023_phase12_geography.py
+    versions/0024_phase14_pilot.py
+    versions/0025_workforce.py
+    versions/0026_weather_intelligence.py
+  tests/                      Config, DB, auth, API, migration, seed, weather tests
 ```
 
 ## Requirements
 
-- Node.js 20.9+ (tested with Node 24.18) and npm 10+
-- Python 3.11+ (tested with Python 3.13)
+- Node.js 20.9+ (CI floor; locally verified with Node 22.22.2) and npm 10+
+- Python 3.11+ (CI floor; locally verified with Python 3.13.5)
 - Git
 - A Supabase project (PostgreSQL + PostGIS + Auth) for real database/auth
   integration. No local PostgreSQL server is required for the automated tests.
@@ -637,6 +682,9 @@ Add the frontend origin to `CORS_ORIGINS` in `backend/.env` when changing ports.
 | `GET` | `/api/v1/incidents/{id}/relationships` | Visible persisted relationship reviews |
 | `POST` | `/api/v1/incidents/{id}/relationships` | WORKER/ADMIN confirm or dismiss a relationship |
 | `GET` | `/api/v1/infrastructure/assets` | Active infrastructure reference set |
+| `GET` | `/api/v1/weather/incidents/{id}/assessment` | Explainable weather impact assessment for a visible incident |
+| `POST` | `/api/v1/weather/incidents/{id}/assessment/refresh` | ADMIN-only forced weather reassessment |
+| `GET` | `/api/v1/weather/config` | ADMIN-only non-sensitive weather config (no secrets) |
 | `GET` | `/api/v1/departments` | Active departments for assignment |
 | `GET` | `/api/v1/risk/config` | Versioned risk model and factor metadata |
 | `GET` | `/api/v1/risk/cells` | Risk cells as JSON or GeoJSON, with bbox/resolution/window filters |
@@ -794,6 +842,13 @@ rejected. The last active administrator cannot be demoted.
 | `RISK_TREND_MIN_INCIDENTS` | `3` | Minimum current+previous history |
 | `RISK_WEIGHT_*` | see config | Nine factors summing to 1.0 |
 | `RISK_THRESHOLD_LOW/MODERATE/HIGH/CRITICAL` | `20/40/65/85` | Category bands |
+| `WEATHER_ENABLED` | `true` | Master switch; writes explicit `DISABLED` assessments |
+| `WEATHER_PROVIDER` | `open-meteo` | `open-meteo` or `mock` |
+| `WEATHER_API_BASE_URL` | Open-Meteo forecast URL | HTTPS enforced except localhost |
+| `WEATHER_API_KEY` | unset | Optional; free tier needs none. Never exposed by the config endpoint |
+| `WEATHER_TIMEOUT_S` / `WEATHER_MAX_RETRIES` / `WEATHER_RETRY_BACKOFF_S` | `8` / `2` / `0.5` | Bounded external-call controls |
+| `WEATHER_CACHE_TTL_MINUTES` / `WEATHER_FORECAST_HOURS` | `30` / `12` | Cache and forecast-window bounds |
+| `WEATHER_RULE_*` | see config | Heavy rain, rain probability, strong wind/gust, high temperature thresholds |
 
 Production validation rejects debug mode, empty CORS origins, a missing
 database URL, and a missing Supabase URL. Secret settings use `SecretStr` and
@@ -853,6 +908,11 @@ instead of crashing. The production build succeeds without live credentials.
   on this Supabase project `storage.objects` is owned by
   `supabase_storage_admin`, so the policy is skipped and direct Storage reads
   remain deny-all. See [backend/docs/evidence.md](backend/docs/evidence.md).
+- `alembic/versions/0023_phase12_geography.py` adds geographic contexts;
+  `0024_phase14_pilot` adds governed pilot/field-observation tables;
+  `0025_workforce` adds worker applications, profiles, assignments and events;
+  `0026_weather_intelligence` adds `weather_assessments` with RLS and SELECT-only
+  `authenticated` grants. All four are local and pending deployment approval.
 - The seed is deterministic and idempotent. It creates three departments, five
   infrastructure assets, and three dependency edges. It does not create users
   or invent H3 risk cells.
@@ -863,15 +923,17 @@ details, Supabase setup, and security caveats.
 
 ## Live integration validation
 
-The configured Supabase project was validated on **2026-11-23** and rechecked on **2026-11-24**:
+The configured Supabase project was validated on **2026-11-23** and rechecked on **2026-11-24**.
+These are historical results; no live system was modified or re-verified during the 2026-11-27
+hackathon sprint:
 
 - Database and Auth project references match between backend and frontend.
 - Auth health endpoint returned `200`; JWKS returned a valid ES256 signing key.
 - PostgreSQL 17.12 was reachable over TLS through the configured pooler.
 - PostGIS 3.3.7 is installed in the `public` schema.
-- Alembic is at `0022_snapshot_provenance`; 53 application tables, 57
+- Alembic was at `0022_snapshot_provenance`; 53 application tables, 57
   application RLS policies, 102 foreign keys, 29 unique constraints, and 6 GIST
-  indexes exist (plus `alembic_version` and PostGIS
+  indexes existed at that time (plus `alembic_version` and PostGIS
   `spatial_ref_sys`). The private `incident-evidence` bucket exists with
   a 10 MB limit and JPEG/PNG/WebP allowlist.
 - RLS was exercised with synthetic JWT claims inside a rolled-back transaction
@@ -1115,9 +1177,14 @@ suggestion-vs-inference labels, risk formatting, and risk API serialization.
 | Fresh Q3 2026 external validation | Complete; Brooklyn and Manhattan evaluated, both below strongest baseline |
 | Phase 11 staff RLS and append-only event guards | Applied live; 5 tables, 5 policies, 2 append-only triggers verified |
 | Authoritative municipal hazard outcomes / field labels | Not included; no human-verified operational ground truth or complete correlation universe |
+| Weather provider abstraction and rule engine | Complete; 21 backend tests and a live read-only Open-Meteo call |
+| Weather persistence, RLS and RBAC | Complete locally; migration `0026` not applied to the live database |
+| Weather UI and role-aware evidence | Complete; 2 frontend test files and 13 browser screenshots |
 
 Phase 4 was committed and pushed as `bfc073e`
 (`feat(civicflow): implement phase 4 incident intelligence`). Phase 5 is
 committed as `640f173`; Phase 6 is committed as `a9d6923`; Phase 7 is committed
 as `e4a3ab6`; Phase 8 is committed as `62c2e02`. Phase 9 is committed for review
-without rewriting Phase 1–8 history.
+without rewriting Phase 1–8 history. The hackathon sprint's evidence, scorecard,
+screenshots and remaining submission blockers are recorded in
+[docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md](docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md).
