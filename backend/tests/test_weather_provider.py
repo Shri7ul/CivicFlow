@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -27,12 +28,18 @@ def _settings(**overrides: object) -> Settings:
 
 
 def _payload() -> dict[str, Any]:
+    # Forecast hours must be in the future for the parser to keep them.
+    base = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    times = [
+        (base + timedelta(hours=offset)).strftime("%Y-%m-%dT%H:%M")
+        for offset in (1, 2, 3)
+    ]
     return {
         "latitude": 23.81,
         "longitude": 90.41,
         "timezone": "UTC",
         "current": {
-            "time": "2026-11-27T12:00",
+            "time": base.strftime("%Y-%m-%dT%H:%M"),
             "temperature_2m": 30.5,
             "precipitation": 4.2,
             "wind_speed_10m": 22.0,
@@ -40,7 +47,7 @@ def _payload() -> dict[str, Any]:
             "weather_code": 61,
         },
         "hourly": {
-            "time": ["2026-11-27T13:00", "2026-11-27T14:00", "2026-11-27T15:00"],
+            "time": times,
             "temperature_2m": [31.0, 31.5, 30.0],
             "precipitation": [5.0, 6.0, 0.0],
             "precipitation_probability": [70, 80, 10],

@@ -12,7 +12,7 @@ from functools import lru_cache
 from typing import Annotated, Literal
 from urllib.parse import urlparse
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 Environment = Literal["development", "testing", "staging", "production"]
@@ -153,6 +153,12 @@ class Settings(BaseSettings):
     weather_provider: Literal["open-meteo", "mock"] = "open-meteo"
     weather_api_base_url: str = "https://api.open-meteo.com/v1/forecast"
     weather_api_key: SecretStr | None = None
+    # Keyless fallback used when the primary provider rate-limits us. MET
+    # Norway's Locationforecast is free and needs no API key.
+    weather_fallback_enabled: bool = True
+    weather_fallback_base_url: str = (
+        "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+    )
     weather_timeout_s: float = Field(default=8.0, ge=1.0, le=60.0)
     weather_max_retries: int = Field(default=2, ge=0, le=5)
     weather_retry_backoff_s: float = Field(default=0.5, ge=0.0, le=10.0)
@@ -165,6 +171,13 @@ class Settings(BaseSettings):
     weather_rule_high_temperature_c: float = Field(
         default=35.0, ge=-50.0, le=70.0
     )
+
+    # Civic AI assistant. The key is optional; when absent the API returns
+    # deterministic, clearly-labelled local summaries instead.
+    groq_api_key: SecretStr | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_timeout_s: float = Field(default=15.0, ge=1.0, le=60.0)
 
     @field_validator("app_name")
     @classmethod
@@ -199,6 +212,7 @@ class Settings(BaseSettings):
         "supabase_anon_key",
         "supabase_service_role_key",
         "weather_api_key",
+        "groq_api_key",
         mode="before",
     )
     @classmethod
@@ -230,15 +244,25 @@ class Settings(BaseSettings):
             raise ValueError("Supabase URLs must use HTTPS outside local development")
         return value
 
-    @field_validator("weather_api_base_url")
+    @field_validator("weather_api_base_url", "weather_fallback_base_url")
     @classmethod
-    def _validate_weather_url(cls, value: str) -> str:
+    def _validate_weather_url(cls, value: str, info: ValidationInfo) -> str:
+        name = info.field_name.upper()
         value = value.strip().rstrip("/")
         parsed = urlparse(value)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("WEATHER_API_BASE_URL must be an http(s) URL")
+            raise ValueError(f"{name} must be an http(s) URL")
         if parsed.scheme == "http" and "localhost" not in parsed.netloc and "127.0.0.1" not in parsed.netloc:
-            raise ValueError("WEATHER_API_BASE_URL must use HTTPS outside local development")
+            raise ValueError(f"{name} must use HTTPS outside local development")
+        return value
+
+    @field_validator("groq_base_url")
+    @classmethod
+    def _validate_groq_url(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        parsed = urlparse(value)
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise ValueError("GROQ_BASE_URL must be an https URL")
         return value
 
     @field_validator("database_sslmode")

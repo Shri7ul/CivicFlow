@@ -21,11 +21,17 @@ from app.models import (
 )
 from app.services.incidents import get_incident, parse_point
 from app.weather import rules
+from app.weather.chain import fetch_snapshot
 from app.weather.errors import WeatherProviderError, invalid_coordinates
-from app.weather.provider import WeatherProvider, build_provider
+from app.weather.provider import (
+    WeatherProvider,
+    build_fallback_provider,
+    build_provider,
+)
 
 ATTRIBUTION = {
     "open-meteo": "Weather data by Open-Meteo.com (CC BY 4.0)",
+    "met-no": "Weather data by MET Norway Locationforecast (CC BY 4.0)",
     "mock": "Simulated weather data (MOCK provider; not observed conditions)",
 }
 DEFAULT_ATTRIBUTION = "Weather provider attribution unavailable"
@@ -137,7 +143,14 @@ def ensure_assessment(
         if not _valid_coordinates(latitude, longitude):
             raise invalid_coordinates()
         selected = provider or build_provider(settings)
-        snapshot = selected.fetch(latitude, longitude)
+        snapshot = fetch_snapshot(
+            selected,
+            settings,
+            latitude,
+            longitude,
+            fallback=build_fallback_provider(settings),
+            force=force,
+        )
         result = rules.assess(incident, snapshot, settings)
     except WeatherProviderError as exc:
         return _write_failure(session, incident, existing, exc, now, reason)

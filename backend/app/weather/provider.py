@@ -331,3 +331,185 @@ def build_provider(settings: Settings) -> WeatherProvider:
     if settings.weather_provider == "mock":
         return MockProvider()
     return OpenMeteoProvider(settings)
+
+
+# MET Norway symbol codes -> WMO weather codes used by Open-Meteo. Mapping is
+# approximate but explicit; unknown symbols remain unknown rather than being
+# guessed. All values are real provider observations/forecasts.
+_SYMBOL_TO_WMO = {
+    "clearsky": 0,
+    "fair": 1,
+    "partlycloudy": 2,
+    "cloudy": 3,
+    "fog": 45,
+    "lightrain": 61,
+    "rain": 61,
+    "heavyrain": 65,
+    "lightrainshower": 80,
+    "rainshower": 80,
+    "heavyrainshower": 82,
+    "sleet": 68,
+    "lightsnow": 71,
+    "snow": 71,
+    "heavysnow": 75,
+    "snowshower": 85,
+    "thunder": 95,
+}
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+class MetNoProvider:
+    """Keyless fallback using MET Norway's open Locationforecast API.
+
+    Used only when the primary provider fails (typically an HTTP 429). No API
+    key is required. Missing fields stay ``None`` so the rule engine can keep
+    its uncertainty language instead of inventing a value.
+    """
+
+    name = "met-no"
+
+    def __init__(self, settings: Settings) -> None:
+        self._base_url = settings.weather_fallback_base_url
+        self._timeout = httpx.Timeout(settings.weather_timeout_s)
+        self._max_retries = settings.weather_max_retries
+        self._backoff = settings.weather_retry_backoff_s
+        self._forecast_hours = settings.weather_forecast_hours
+
+    def fetch(self, latitude: float, longitude: float) -> WeatherSnapshot:
+        payload = self._request(latitude, longitude)
+        return self._parse(payload, latitude, longitude)
+
+    def _request(self, latitude: float, longitude: float) -> dict[str, Any]:
+        params = {"lat": latitude, "lon": longitude}
+        headers = {
+            # MET Norway asks API clients to identify themselves.
+            "User-Agent": "CivicFlow/1.0 (+https://github.com/Shri7ul/CivicFlow)",
+            "Accept": "application/json",
+        }
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                with httpx.Client(timeout=self._timeout, follow_redirects=False) as client:
+                    response = client.get(self._base_url, params=params, headers=headers)
+            except httpx.TimeoutException as exc:
+                raise provider_timeout() from exc
+            except httpx.HTTPError as exc:
+                raise provider_unavailable(type(exc).__name__) from exc
+
+            if response.status_code == 429:
+                if attempt <= self._max_retries:
+                    time.sleep(self._backoff * attempt)
+                    continue
+                raise rate_limited()
+            if response.status_code >= 500:
+                if attempt <= self._max_retries:
+                    time.sleep(self._backoff * attempt)
+                    continue
+                raise provider_unavailable(f"HTTP {response.status_code}")
+            if response.status_code >= 400:
+                raise provider_unavailable(f"HTTP {response.status_code}")
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise malformed_response() from exc
+            if not isinstance(payload, dict):
+                raise malformed_response()
+            return payload
+
+    def _parse(
+        self, payload: dict[str, Any], latitude: float, longitude: float
+    ) -> WeatherSnapshot:
+        timeseries = _as_dict(payload.get("properties")).get("timeseries")
+        if not isinstance(timeseries, list) or not timeseries:
+            raise malformed_response()
+
+        def details_of(entry: Any) -> dict[str, Any]:
+            data = _as_dict(_as_dict(entry).get("data"))
+            return _as_dict(data.get("instant")).get("details") or {}
+
+        def precipitation_of(entry: Any) -> float | None:
+            data = _as_dict(_as_dict(entry).get("data"))
+            short = _as_dict(data.get("next_1_hours"))
+            value = _number(_as_dict(short.get("details")).get("precipitation_amount"))
+            if value is not None:
+                return value
+            long = _as_dict(data.get("next_6_hours"))
+            six = _number(_as_dict(long.get("details")).get("precipitation_amount"))
+            return six / 6 if six is not None else None
+
+        def symbol_of(entry: Any) -> str | None:
+            data = _as_dict(_as_dict(entry).get("data"))
+            for block in ("next_1_hours", "next_6_hours", "next_12_hours"):
+                symbol = _as_dict(_as_dict(data.get(block)).get("summary")).get(
+                    "symbol_code"
+                )
+                if isinstance(symbol, str) and symbol:
+                    return symbol
+            return None
+
+        first_details = details_of(timeseries[0])
+        wind_ms = _number(first_details.get("wind_speed"))
+        gust_ms = _number(first_details.get("wind_speed_of_gust"))
+        symbol = symbol_of(timeseries[0])
+        code = _SYMBOL_TO_WMO.get(symbol) if symbol else None
+        current = CurrentConditions(
+            observed_at=_parse_time(_as_dict(timeseries[0]).get("time")),
+            temperature_c=_number(first_details.get("air_temperature")),
+            precipitation_mm=precipitation_of(timeseries[0]),
+            wind_speed_kmh=round(wind_ms * 3.6, 1) if wind_ms is not None else None,
+            wind_gusts_kmh=round(gust_ms * 3.6, 1) if gust_ms is not None else None,
+            weather_code=code,
+        )
+
+        now = datetime.now(timezone.utc)
+        forecast: list[ForecastHour] = []
+        for entry in timeseries:
+            parsed = _parse_time(_as_dict(entry).get("time"))
+            if parsed is None or parsed < now.replace(minute=0, second=0, microsecond=0):
+                continue
+            forecast.append(
+                ForecastHour(
+                    time=parsed,
+                    temperature_c=_number(details_of(entry).get("air_temperature")),
+                    precipitation_mm=precipitation_of(entry),
+                    precipitation_probability_pct=None,
+                )
+            )
+            if len(forecast) >= self._forecast_hours:
+                break
+        if not forecast:
+            raise malformed_response()
+
+        completeness = sum(
+            1
+            for value in (
+                current.temperature_c,
+                current.precipitation_mm,
+                current.wind_speed_kmh,
+                current.weather_code,
+            )
+            if value is not None
+        )
+        quality = "OK" if completeness >= 3 else "PARTIAL"
+        return WeatherSnapshot(
+            provider=self.name,
+            latitude=latitude,
+            longitude=longitude,
+            retrieved_at=datetime.now(timezone.utc),
+            current=current,
+            forecast=tuple(forecast),
+            data_quality=quality,
+        )
+
+
+def build_fallback_provider(settings: Settings) -> WeatherProvider | None:
+    """Return the keyless fallback, or None in tests/mock mode."""
+    if not settings.weather_fallback_enabled:
+        return None
+    if settings.app_env == "testing" or settings.weather_provider == "mock":
+        return None
+    return MetNoProvider(settings)

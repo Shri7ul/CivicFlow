@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.db.health import clear_engine_cache
 from app.main import create_app
 from app.models import Base
+from app.weather.cache import grid_cache
 
 
 @pytest.fixture(autouse=True)
@@ -35,9 +36,11 @@ def test_environment(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("WEATHER_ENABLED", "false")
     get_settings.cache_clear()
     clear_engine_cache()
+    grid_cache.clear()
     yield
     get_settings.cache_clear()
     clear_engine_cache()
+    grid_cache.clear()
 
 
 @pytest.fixture
