@@ -69,6 +69,7 @@ from app.workforce.assignments import (
     verify_completion,
 )
 from app.workforce.dependencies import ActiveWorker, require_active_worker
+from app.workforce.notifications import get_for_recipient, list_for_recipient
 from app.workforce.workers import (
     assignment_counts,
     candidates_for_incident,
@@ -608,12 +609,9 @@ def list_events(
     summary="Read the caller's in-app notifications",
 )
 def list_notifications(session: DbSession, user: ActiveUser) -> NotificationListResponse:
-    rows = session.scalars(
-        select(WorkforceNotification)
-        .where(WorkforceNotification.recipient_id == user.profile.id)
-        .order_by(WorkforceNotification.created_at.desc())
-        .limit(100)
-    ).all()
+    # A deployment that has not applied the workforce migration yet gets an
+    # empty inbox rather than a 500 that breaks the whole dashboard.
+    rows = list_for_recipient(session, user.profile.id)
     unread = sum(1 for row in rows if row.read_at is None)
     return NotificationListResponse(
         items=[NotificationResponse.model_validate(row) for row in rows],
@@ -630,8 +628,8 @@ def list_notifications(session: DbSession, user: ActiveUser) -> NotificationList
 def mark_notification_read(
     notification_id: uuid.UUID, session: DbSession, user: ActiveUser
 ) -> WorkforceNotification:
-    notification = session.get(WorkforceNotification, notification_id)
-    if notification is None or notification.recipient_id != user.profile.id:
+    notification = get_for_recipient(session, notification_id, user.profile.id)
+    if notification is None:
         raise AppError(
             "Notification not found.", status_code=404, code="notification_not_found"
         )

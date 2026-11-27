@@ -41,7 +41,7 @@ def test_render_blueprint_matches_backend_layout() -> None:
         "plan: free",
         "rootDir: backend",
         "buildCommand: python -m pip install -r requirements.txt",
-        "startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+        "startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT",
         "healthCheckPath: /api/v1/health",
         'value: "3.11"',
         "APP_ENV",
@@ -51,6 +51,10 @@ def test_render_blueprint_matches_backend_layout() -> None:
     )
     for fragment in expected:
         assert fragment in config, f"render.yaml is missing {fragment!r}"
+    # A missing workforce table must never be served by an unmigrated schema.
+    assert config.index("python -m alembic upgrade head") < config.index(
+        "uvicorn app.main:app"
+    )
 
 
 def test_python_version_file_agrees_with_blueprint() -> None:

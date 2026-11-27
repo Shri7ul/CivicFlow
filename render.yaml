@@ -20,7 +20,13 @@ services:
     branch: main
     rootDir: backend
     buildCommand: python -m pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Apply every pending Alembic revision before the API accepts traffic.
+    # Without this, a fresh deployment serves a schema that predates the
+    # workforce tables (for example workforce_notifications) and notification
+    # queries fail with UndefinedTable. This must also be reflected in the
+    # existing Render service's dashboard Start Command if that command was
+    # configured manually rather than from this blueprint.
+    startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       # 3.11 is the declared minimum (pyproject.toml: requires-python >=3.11)
