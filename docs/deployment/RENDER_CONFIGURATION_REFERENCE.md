@@ -3,7 +3,10 @@
 Compact, verified reference. This file must match `render.yaml` and the
 backend source. Full instructions are in `RENDER_WEB_SERVICE_DEPLOYMENT.md`.
 
-Exact service values (identical to `render.yaml`):
+The deployed service is configured manually from GitHub, not from `render.yaml`.
+Migrations run automatically in the FastAPI startup lifespan, so the Start
+Command below is defence in depth. Exact service values:
+
 
 ```text
 plan: free

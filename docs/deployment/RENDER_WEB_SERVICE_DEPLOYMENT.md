@@ -83,13 +83,19 @@ blueprint to the **existing** service and verify the result):
 Render does not fall back to its 3.14 default. `backend/.python-version` is
 also present for local tooling consistency.
 
-The `alembic upgrade head` prefix is mandatory: without it a deploy can serve
-an older schema where `workforce_notifications` and other workforce tables do
-not exist. **If the existing Render service was configured manually, update
-its Start Command in the Render dashboard as well** — editing `render.yaml`
-alone does not change a service that was not created from the blueprint.
-Notification reads now degrade to an empty inbox as a safety net, but the
-migration step is still required for the full workforce workflow.
+This service is deployed manually from GitHub, not from `render.yaml`. Schema
+upgrades are therefore also enforced inside the application itself: the
+FastAPI lifespan calls `alembic upgrade head` before the server accepts
+traffic (`backend/app/db/migrations.py`), so a manual Render restart or deploy
+cannot serve an unmigrated schema. The `alembic upgrade head` prefix in the
+Start Command above is intentional defence in depth — the two runs are
+idempotent. Test and SQLite-backed harness environments skip the startup
+upgrade because they create their own schema.
+
+Notification reads degrade to an empty inbox as a final safety net, but the
+startup migration is what guarantees tables such as `workforce_notifications`
+exist. If a startup migration fails, the process exits rather than serving a
+broken schema.
 
 ### Why Python 3.11
 

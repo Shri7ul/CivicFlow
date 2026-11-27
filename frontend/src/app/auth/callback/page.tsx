@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { readCallbackParameters } from "@/lib/auth/callback";
 
@@ -51,26 +53,30 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-slate-950 px-5">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center">
-        <h1 className="text-xl font-semibold text-white">
-          {state === "working" ? "Finishing sign in" : "Sign-in problem"}
-        </h1>
-        <p
-          role={state === "error" ? "alert" : "status"}
-          className="mt-3 text-sm leading-6 text-slate-400"
-        >
-          {message}
-        </p>
-        {state === "error" ? (
-          <Link
-            href="/login"
-            className="mt-6 inline-flex rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950"
+    <div className="flex min-h-dvh flex-col bg-slate-950">
+      <SiteHeader />
+      <main className="flex flex-1 items-center justify-center px-5">
+        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center">
+          <h1 className="text-xl font-semibold text-white">
+            {state === "working" ? "Finishing sign in" : "Sign-in problem"}
+          </h1>
+          <p
+            role={state === "error" ? "alert" : "status"}
+            className="mt-3 text-sm leading-6 text-slate-400"
           >
-            Back to sign in
-          </Link>
-        ) : null}
-      </div>
-    </main>
+            {message}
+          </p>
+          {state === "error" ? (
+            <Link
+              href="/login"
+              className="mt-6 inline-flex rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950"
+            >
+              Back to sign in
+            </Link>
+          ) : null}
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }

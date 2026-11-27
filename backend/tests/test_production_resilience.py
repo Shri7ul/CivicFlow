@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.auth.jwt import get_token_verifier
+from app.db.migrations import apply_startup_migrations, should_run_migrations
 from app.db.session import get_db_session
 from app.main import create_app
 from app.models import Base, Profile, Role
@@ -97,3 +99,39 @@ def test_auth_me_uses_live_database_role_not_a_token_claim() -> None:
         after = client.get("/api/v1/auth/me", headers=headers)
         assert after.status_code == 200
         assert after.json()["role"] == "ADMIN"
+
+
+def test_startup_migrations_skip_test_and_sqlite_environments() -> None:
+    assert should_run_migrations(make_settings(app_env="testing")) is False
+    assert (
+        should_run_migrations(
+            make_settings(
+                app_env="development", database_url="sqlite:////tmp/civicflow.db"
+            )
+        )
+        is False
+    )
+    assert (
+        should_run_migrations(
+            make_settings(
+                app_env="development",
+                database_url="postgresql+psycopg://user:pass@localhost/civicflow",
+            )
+        )
+        is True
+    )
+
+
+def test_startup_migrations_upgrade_real_database(monkeypatch) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "app.db.migrations._upgrade_sync", lambda: calls.append("upgraded")
+    )
+    settings = make_settings(
+        app_env="development",
+        database_url="postgresql+psycopg://user:pass@localhost/civicflow",
+    )
+
+    asyncio.run(apply_startup_migrations(settings))
+
+    assert calls == ["upgraded"]

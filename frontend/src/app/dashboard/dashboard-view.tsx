@@ -73,8 +73,6 @@ export function DashboardView() {
   const [noticeError, setNoticeError] = useState<string | null>(null);
   const [noticeBusyId, setNoticeBusyId] = useState<string | null>(null);
 
-  const role = profile?.role ?? "CITIZEN";
-
   useEffect(() => {
     if (!profile) return;
     const controller = new AbortController();
@@ -172,7 +170,12 @@ export function DashboardView() {
     setNoticeError(null);
     setReloadKey((value) => value + 1);
   }, []);
-  const allowedPaths = useMemo(() => navigationForRole(role), [role]);
+  // Never infer a role before /auth/me resolves: a failed or loading profile
+  // must not be shown as a Citizen workspace.
+  const allowedPaths = useMemo(
+    () => (profile ? navigationForRole(profile.role) : []),
+    [profile],
+  );
   const actions = quickActions.filter((action) =>
     allowedPaths.some(
       (path) => action.path === path || action.path.startsWith(`${path}/`),
@@ -198,7 +201,7 @@ export function DashboardView() {
             Welcome, {profile.full_name}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            {role === "CITIZEN"
+            {profile.role === "CITIZEN"
               ? "Track your reports and their response status. Counts below cover only the incidents you reported."
               : "Monitor the shared incident queue and move reports through the response lifecycle. Counts are scoped to your role."}
           </p>

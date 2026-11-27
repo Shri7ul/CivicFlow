@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import RequestLoggingMiddleware, reset_limiter
+from app.db.migrations import apply_startup_migrations
 from app.db.session import clear_engine_cache
 from app.version import APP_VERSION
 
@@ -38,6 +39,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         "Database configuration: %s",
         "present" if settings.database_url_value else "not configured",
     )
+    # Manual Render deployments restart this process without running a
+    # blueprint build step. Upgrade the schema before accepting traffic.
+    await apply_startup_migrations(settings)
     try:
         yield
     finally:
