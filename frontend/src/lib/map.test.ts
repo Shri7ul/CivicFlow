@@ -37,10 +37,15 @@ describe("basemap configuration", () => {
     expect(tiles.join(" ")).toContain("basemaps.cartocdn.com/dark_all");
   });
 
-  it("keeps a usable fallback and correct attribution", () => {
-    expect(FALLBACK_TILES.join(" ")).toContain("basemaps.cartocdn.com");
-    expect(OSM_STYLE.sources.osm.attribution).toContain("CARTO");
-    expect(OSM_STYLE.sources.osm.attribution).toContain("OpenStreetMap");
+  it("falls back to Esri dark tiles and credits every provider", () => {
+    expect(FALLBACK_TILES.join(" ")).toContain(
+      "server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base",
+    );
+    expect(FALLBACK_TILES.join(" ")).toContain("{z}/{y}/{x}");
+    const attribution = OSM_STYLE.sources.osm.attribution;
+    expect(attribution).toContain("CARTO");
+    expect(attribution).toContain("OpenStreetMap");
+    expect(attribution).toContain("Esri");
   });
 });
 

@@ -34,13 +34,13 @@ export const BASEMAP_TILES = [
 ];
 // Kept as an alias for callers that import the old name.
 export const OSM_TILES = BASEMAP_TILES;
-// A second CARTO style on different hosts, used only for genuine load errors.
+// Automatic fallback: Esri's dark basemap keeps the dark theme intact if the
+// primary CARTO tiles fail. Esri expects {z}/{y}/{x} ordering.
 export const FALLBACK_TILES = [
-  "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
 ];
 const MAP_ATTRIBUTION =
-  '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a>';
+  '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a> · Tiles © <a href="https://www.esri.com/">Esri</a>';
 
 export const OSM_STYLE = {
   version: 8 as const,

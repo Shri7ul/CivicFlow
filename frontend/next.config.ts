@@ -36,9 +36,10 @@ function supabaseOrigins(): string[] {
 const supabaseSources = supabaseOrigins();
 
 const tileSources = [
-  "https://tile.openstreetmap.org",
   "https://a.basemaps.cartocdn.com",
   "https://b.basemaps.cartocdn.com",
+  "https://c.basemaps.cartocdn.com",
+  "https://server.arcgisonline.com",
 ];
 
 const connectSources = [
@@ -48,6 +49,8 @@ const connectSources = [
   // MapLibre fetches glyph PBFs with fetch(), which is governed by
   // connect-src (not font-src). Without this origin all map text labels fail.
   "https://fonts.openmaptiles.org",
+  // Reverse geocoding in the incident location picker.
+  "https://nominatim.openstreetmap.org",
   ...tileSources,
 ].filter((item): item is string => Boolean(item));
 
