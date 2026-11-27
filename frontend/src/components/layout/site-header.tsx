@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AuthNavAccount, AuthNavLinks } from "@/components/auth/auth-nav";
+import { AuthNavAccount } from "@/components/auth/auth-nav";
 import { getApiBaseUrl } from "@/lib/api/client";
 import { siteConfig } from "@/config/app";
 
@@ -94,8 +94,6 @@ export function SiteHeader() {
               />
             </svg>
           </a>
-          <span aria-hidden="true" className="mx-1 h-5 w-px bg-white/10" />
-          <AuthNavLinks />
         </nav>
         <AuthNavAccount />
       </div>
