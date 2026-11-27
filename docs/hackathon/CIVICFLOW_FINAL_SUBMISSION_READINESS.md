@@ -78,7 +78,12 @@ cd backend && .venv/Scripts/python.exe -m pytest -q --junitxml=.../backend_final
 cd frontend && npm run typecheck   -> clean
 cd frontend && npm run lint        -> clean
 cd frontend && npm test            -> 42 test files, 175 tests passed
-cd frontend && npm run build       -> succeeded
+cd frontend && npm run build       -> succeeded (also verified from a clean tree with .next removed)
+
+CI follow-up: the first push's GitHub Actions frontend job failed because
+`app/layout.tsx` used Next.js's generated `LayoutProps<"/">` type, which does
+not exist before `next build`. Replaced it with `ReactNode`; CI-equivalent
+typecheck/lint/tests/build now pass from a clean state.
 
 cd backend && .venv/Scripts/python.exe -m alembic heads
   -> 0026_weather_intelligence (head)
@@ -123,6 +128,8 @@ Screenshot directory: `docs/hackathon/screenshots/final/` (28 real captures, inc
 - No Vercel or Render CLI is installed and no deployment credentials are present in the environment, so I could not trigger or inspect a deployment directly from this session.
 - No production account or token was available, so authenticated live dashboards, the live Risk page, live weather and live ML panel could not be exercised. I did not create production accounts or alter real users.
 - The live database migration head cannot be inspected without production DB credentials. Historical deployment docs recorded head `0022` with `0023`–`0026` pending; weather needs `0026` and workforce needs `0025`. This must be checked by an operator before relying on live weather/workforce.
+- After pushing commit `5f5579b`, repeated no-cache checks of the live login bundle still showed no new strings (`Risk intelligence`, `Intelligence & model transparency`), so **Vercel has not yet served the new build**. GitHub check runs showed no Vercel deployment status; Render also has no deploy hook in the repository. Deployment therefore remains operator-dependent.
+- The first pushed commit's frontend CI job failed on a generated `LayoutProps` type in `app/layout.tsx`; that was fixed in a follow-up commit and the CI-equivalent checks now pass from a clean state.
 - Therefore **authenticated deployed functionality is not claimed as verified**. The local production build and API are verified; public live surfaces and backend health/CORS are verified.
 
 Deployment path: pushing to `main` is the available trigger for Vercel/Render auto-deployments. After the push, re-check the live bundle for the strings `Deterministic rules` and `Intelligence & model transparency` to confirm the new build is live; then repeat the authenticated flow with an authorized test account.
