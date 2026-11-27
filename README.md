@@ -1,5 +1,44 @@
 # CivicFlow
 
+### See the city before it fails.
+
+**One map. Three roles. A live chain of cause and effect from a blocked drain to a hospital ambulance route.**
+
+> CivicFlow turns scattered civic complaints into an explainable operating picture. Report a waterlogged road, watch the H3 risk engine light up the cell, follow the dependency path to critical infrastructure, then put the right field crew on the job — with every claim labelled as observed, inferred, or simulated.
+
+**Live demo:** [civic-flow-lilac.vercel.app](https://civic-flow-lilac.vercel.app) · **API health:** [Render](https://civicflow-8dol.onrender.com/api/v1/health) · **Source:** [GitHub](https://github.com/Shri7ul/CivicFlow)
+
+![CivicFlow risk intelligence](docs/hackathon/screenshots/final/02-admin-risk-intelligence.png)
+
+---
+
+## Try it in 60 seconds
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Citizen | `citizen@civicflow.com` | `12345678` |
+| Admin | `admin@civicflow.com` | `12345678` |
+| Worker | `worker@civicflow.com` | `12345678` |
+
+> Demo accounts for the competition walkthrough only. Rotate or remove them before any real deployment. Sign in at `/login` on the live site.
+
+**Judge path:** Citizen → `/map` (click a Mirpur-10 pin) → Admin → `/risk` (open the hottest H3 cell) → `/decisions` (run the Heavy Rainfall scenario) → `/admin` (optimize and assign) → Worker → accept the task.
+
+**Reset the demo data:** paste `scripts/seed_dhaka_demo.sql` into Supabase SQL Editor. It rebuilds the five interconnected Mirpur-10 → Kazipara → Agargaon incidents, the infrastructure dependency graph, the planning scenario, and the ready worker team.
+
+---
+
+## Why it stands out
+
+- **Explainable, not magic.** Every risk score carries factors, weights, confidence, and limitations.
+- **Cascades you can trace.** Confirmed incident relationships and infrastructure dependencies show *why* one fault threatens the next asset.
+- **Role-aware by design.** Citizens see their own reports; workers and admins run the citywide queue. Authorization lives in the backend, with RLS as a second layer.
+- **Honest about evidence.** The NYC 311 backtests did not beat the strongest baseline. The result is recorded, not hidden. Simulation never dispatches anything.
+
+**Stack:** Next.js 16 · React 19 · TypeScript · Tailwind · MapLibre GL · FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL + PostGIS · Supabase Auth · H3 · Vitest · Pytest
+
+---
+
 **Urban Impact & Response Intelligence**
 
 CivicFlow is a full-stack platform for modeling interconnected civic incidents,
