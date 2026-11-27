@@ -72,6 +72,45 @@ function errorMessage(error: unknown): string {
     : "Unable to load map incidents.";
 }
 
+/** Build popup DOM with textContent only, so incident text can never inject HTML. */
+function buildPopupContent(incident: Incident): HTMLDivElement {
+  const root = document.createElement("div");
+  root.style.cssText =
+    "min-width:220px;max-width:300px;color:#e2e8f0;font-size:12px;line-height:1.5";
+
+  const title = document.createElement("div");
+  title.style.cssText = "font-weight:600;font-size:13px;color:#fff;margin-bottom:6px";
+  title.textContent = incident.title;
+  root.appendChild(title);
+
+  const chips = document.createElement("div");
+  chips.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px";
+  for (const [label, value, color] of [
+    ["Severity", severityLabels[incident.severity], "#fbbf24"],
+    ["Status", statusLabels[incident.status], "#34d399"],
+  ] as const) {
+    const chip = document.createElement("span");
+    chip.style.cssText = `border:1px solid ${color}55;border-radius:9999px;padding:1px 8px;color:${color}`;
+    chip.textContent = `${label}: ${value}`;
+    chips.appendChild(chip);
+  }
+  root.appendChild(chips);
+
+  const address = document.createElement("div");
+  address.style.cssText = "color:#94a3b8";
+  address.textContent = incident.address?.trim()
+    ? incident.address
+    : "No address supplied";
+  root.appendChild(address);
+
+  const coordinates = document.createElement("div");
+  coordinates.style.cssText = "color:#64748b;margin-top:2px";
+  coordinates.textContent = formatCoordinates(incident.latitude, incident.longitude);
+  root.appendChild(coordinates);
+
+  return root;
+}
+
 function addMapLayers(map: MapLibreMap) {
   map.addLayer({
     id: "incident-clusters",
@@ -200,6 +239,8 @@ export function IncidentMapView() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const maplibreRef = useRef<typeof import("maplibre-gl") | null>(null);
   const userMarkerRef = useRef<import("maplibre-gl").Marker | null>(null);
+  const popupRef = useRef<import("maplibre-gl").Popup | null>(null);
+  const incidentsRef = useRef<Incident[]>([]);
   const requestIdRef = useRef(0);
 
   const [mapReady, setMapReady] = useState(false);
@@ -221,6 +262,11 @@ export function IncidentMapView() {
   const [departments, setDepartments] = useState<Department[]>([]);
 
   const incidents = useMemo(() => data?.items ?? [], [data]);
+
+  useEffect(() => {
+    incidentsRef.current = incidents;
+  }, [incidents]);
+
   const selectedIncident =
     incidents.find((incident) => incident.id === selectedId) ?? null;
   const hasFilters = Boolean(
@@ -315,9 +361,26 @@ export function IncidentMapView() {
         map.on("click", "incident-points", (event) => {
           const feature = event.features?.[0];
           const incidentId = feature?.properties?.id;
-          if (typeof incidentId === "string") {
-            setSelectedId(incidentId);
+          if (typeof incidentId !== "string") {
+            return;
           }
+          setSelectedId(incidentId);
+          const incident = incidentsRef.current.find(
+            (item) => item.id === incidentId,
+          );
+          const maplibre = maplibreRef.current;
+          if (!incident || !maplibre || !map) {
+            return;
+          }
+          popupRef.current?.remove();
+          popupRef.current = new maplibre.Popup({
+            closeButton: true,
+            maxWidth: "320px",
+            offset: 14,
+          })
+            .setLngLat([incident.longitude, incident.latitude])
+            .setDOMContent(buildPopupContent(incident))
+            .addTo(map);
         });
 
         map.on("click", (event) => {
@@ -329,6 +392,8 @@ export function IncidentMapView() {
           });
           if (features.length === 0) {
             setSelectedId(null);
+            popupRef.current?.remove();
+            popupRef.current = null;
           }
         });
 
@@ -356,6 +421,8 @@ export function IncidentMapView() {
       }
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
+      popupRef.current?.remove();
+      popupRef.current = null;
       mapRef.current = null;
       maplibreRef.current = null;
       map?.remove();
