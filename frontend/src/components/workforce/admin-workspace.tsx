@@ -40,6 +40,7 @@ import type { Incident } from "@/types/incidents";
 import type {
   AdminOverview,
   Assignment,
+  Candidate,
   WorkerApplication,
   WorkerProfile,
   WorkerStatus,
@@ -67,9 +68,11 @@ const tabs: { id: Tab; label: string }[] = [
 const th = "px-3 py-2 text-left text-[11px] uppercase tracking-wider text-slate-500";
 const td = "px-3 py-3 text-sm text-slate-300";
 
-export function AdminWorkspace() {
+export function AdminWorkspace({ initialTab }: { initialTab?: string }) {
   const { apiRequest } = useAuth();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() =>
+    tabs.some((item) => item.id === initialTab) ? (initialTab as Tab) : "overview",
+  );
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [applications, setApplications] = useState<WorkerApplication[]>([]);
@@ -84,6 +87,11 @@ export function AdminWorkspace() {
   const [note, setNote] = useState("");
   const [workerFilter, setWorkerFilter] = useState<WorkerStatus | "">("");
   const [assignmentFilter, setAssignmentFilter] = useState("");
+  const [candidates, setCandidates] = useState<{
+    incidentId: string;
+    incidentTitle: string;
+    items: Candidate[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -184,21 +192,37 @@ export function AdminWorkspace() {
     }
   }
 
-  async function assignFromCandidates(incidentId: string) {
+  async function showCandidatesById(incidentId: string, incidentTitle: string) {
     setBusy(`candidates-${incidentId}`);
     setError(null);
     try {
       const result = await listCandidates(apiRequest, incidentId);
-      const eligible = result.items.find((item) => item.eligible);
-      if (!eligible) {
-        setError("No eligible worker is available for this incident.");
-        return;
-      }
+      setCandidates({
+        incidentId,
+        incidentTitle,
+        items: result.items,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load candidates.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function showCandidates(incident: Incident) {
+    await showCandidatesById(incident.id, incident.title);
+  }
+
+  async function assignCandidate(incidentId: string, candidate: Candidate) {
+    setBusy(`assign-${candidate.worker_profile_id}`);
+    setError(null);
+    try {
       await assignIncident(apiRequest, {
         incidentId,
-        workerProfileId: eligible.worker_profile_id,
-        note: `Admin-selected candidate: ${eligible.rationale}`,
+        workerProfileId: candidate.worker_profile_id,
+        note: `Admin-selected candidate: ${candidate.rationale}`,
       });
+      setCandidates(null);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Assignment failed.");
@@ -385,10 +409,10 @@ export function AdminWorkspace() {
                           <button
                             type="button"
                             disabled={busy !== null}
-                            onClick={() => void assignFromCandidates(incident.id)}
+                            onClick={() => void showCandidates(incident)}
                             className="rounded-md border border-emerald-400/30 px-2 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50"
                           >
-                            Assign best candidate
+                            Review candidates
                           </button>
                         ) : (
                           <span className="text-xs text-slate-500">—</span>
@@ -400,6 +424,65 @@ export function AdminWorkspace() {
               </table>
             </div>
           )}
+        </Card>
+      ) : null}
+
+      {!loading && (tab === "incidents" || tab === "assignments") && candidates ? (
+        <Card title={`Assign: ${candidates.incidentTitle}`}>
+          <p className="mb-4 text-xs text-slate-400">
+            Approved workers nearest this incident. Workload and area match come
+            from the live API; choose one to create the assignment.
+          </p>
+          {candidates.items.length === 0 ? (
+            <EmptyState message="No approved workers are available right now." />
+          ) : (
+            <ul className="space-y-3">
+              {candidates.items.map((candidate) => (
+                <li
+                  key={candidate.worker_profile_id}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-white">
+                        {candidate.full_name}
+                      </span>
+                      {candidate.eligible ? (
+                        <StatusPill label="Eligible" tone="good" />
+                      ) : (
+                        <StatusPill label="Not eligible" tone="neutral" />
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {candidate.specialization} · {candidate.service_area} ·{" "}
+                      {candidate.active_assignments} active assignment
+                      {candidate.active_assignments === 1 ? "" : "s"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">{candidate.rationale}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!candidate.eligible || busy !== null}
+                    onClick={() =>
+                      void assignCandidate(candidates.incidentId, candidate)
+                    }
+                    className="rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {busy === `assign-${candidate.worker_profile_id}`
+                      ? "Assigning…"
+                      : "Assign"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            onClick={() => setCandidates(null)}
+            className="mt-4 rounded-lg px-3 py-2 text-xs text-slate-400 transition hover:text-white"
+          >
+            Close candidate list
+          </button>
         </Card>
       ) : null}
 
@@ -459,6 +542,11 @@ export function AdminWorkspace() {
               <EmptyState message="Select an application to review its details." />
             ) : (
               <div className="space-y-4">
+                <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs leading-5 text-emerald-100/80">
+                  Approve changes this account&apos;s role to Field worker and
+                  activates their worker profile. Reject keeps the account a
+                  citizen. Every decision is written to the audit log.
+                </p>
                 <div>
                   <p className="text-sm font-medium text-white">{selected.full_name}</p>
                   <p className="text-xs text-slate-500">
@@ -503,7 +591,11 @@ export function AdminWorkspace() {
                         type="button"
                         disabled={busy !== null}
                         onClick={() => void review(decision)}
-                        className="rounded-lg border border-white/10 px-2 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/5 disabled:opacity-50"
+                        className={`rounded-lg border px-2 py-2 text-xs font-medium transition disabled:opacity-50 ${
+                          decision === "APPROVE"
+                            ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20"
+                            : "border-white/10 text-slate-200 hover:bg-white/5"
+                        }`}
                       >
                         {busy === decision ? "Working…" : applicationStatusLabel[decision === "REQUEST_INFO" ? "ADDITIONAL_INFORMATION_REQUIRED" : decision === "UNDER_REVIEW" ? "UNDER_REVIEW" : decision === "APPROVE" ? "APPROVED" : "REJECTED"]}
                       </button>
@@ -648,7 +740,12 @@ export function AdminWorkspace() {
                               <button
                                 type="button"
                                 disabled={busy !== null}
-                                onClick={() => void assignFromCandidates(item.incident_id)}
+                                onClick={() =>
+                                  void showCandidatesById(
+                                    item.incident_id,
+                                    `Assignment ${shortId(item.id)}`,
+                                  )
+                                }
                                 className="rounded-md border border-emerald-400/30 px-2 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50"
                               >
                                 Assign best candidate
