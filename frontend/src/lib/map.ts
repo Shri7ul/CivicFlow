@@ -22,22 +22,21 @@ export const DEFAULT_MAP_VIEW = mapViewForContext(
 export const MIN_MAP_ZOOM = 8;
 export const MAX_MAP_ZOOM = 19;
 
-// tile.openstreetmap.org serves a rendered "Access blocked / usage policy"
-// image with HTTP 200 when a client is blocked. MapLibre sees a successful
-// image, so an error-based fallback never fires and users see a wall of 403
-// tiles. CARTO's hosted basemap is built on OpenStreetMap data, is
-// policy-compliant for this use, and is therefore the primary source.
+// tile.openstreetmap.org serves a rendered "Access blocked" image with HTTP
+// 200, and CARTO's hosted raster tiles can serve an "API KEY REQUIRED"
+// watermark with HTTP 200. MapLibre treats both as successful images, so an
+// error-based fallback never fires. Esri World Dark Gray Base is therefore the
+// primary source: key-free, dark, and clean in production.
 export const BASEMAP_TILES = [
-  "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
 ];
 // Kept as an alias for callers that import the old name.
 export const OSM_TILES = BASEMAP_TILES;
-// Automatic fallback: Esri's dark basemap keeps the dark theme intact if the
-// primary CARTO tiles fail. Esri expects {z}/{y}/{x} ordering.
+// Automatic fallback on a different Esri host. Standard non-retina CARTO
+// tiles were tested too, but they also serve an "API KEY REQUIRED" watermark
+// with HTTP 200, so they cannot satisfy a zero-watermark requirement.
 export const FALLBACK_TILES = [
-  "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+  "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
 ];
 const MAP_ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a> · Tiles © <a href="https://www.esri.com/">Esri</a>';

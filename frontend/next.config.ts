@@ -40,6 +40,7 @@ const tileSources = [
   "https://b.basemaps.cartocdn.com",
   "https://c.basemaps.cartocdn.com",
   "https://server.arcgisonline.com",
+  "https://services.arcgisonline.com",
 ];
 
 const connectSources = [

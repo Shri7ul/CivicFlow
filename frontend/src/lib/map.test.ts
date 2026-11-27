@@ -30,20 +30,25 @@ const incident: Incident = {
 };
 
 describe("basemap configuration", () => {
-  it("uses a policy-compliant CARTO basemap instead of the blocked OSM tile host", () => {
+  it("uses key-free Esri World Dark Gray as the primary basemap", () => {
     const tiles = OSM_STYLE.sources.osm.tiles;
     expect(tiles).toEqual(BASEMAP_TILES);
-    expect(tiles.join(" ")).not.toContain("tile.openstreetmap.org");
-    expect(tiles.join(" ")).toContain("basemaps.cartocdn.com/dark_all");
-  });
-
-  it("falls back to Esri dark tiles and credits every provider", () => {
-    expect(FALLBACK_TILES.join(" ")).toContain(
+    expect(tiles.join(" ")).toContain(
       "server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base",
     );
-    expect(FALLBACK_TILES.join(" ")).toContain("{z}/{y}/{x}");
+    expect(tiles.join(" ")).toContain("{z}/{y}/{x}");
+    expect(tiles.join(" ")).not.toContain("tile.openstreetmap.org");
+    expect(tiles.join(" ")).not.toContain("@2x");
+  });
+
+  it("falls back to a second clean Esri host and credits providers", () => {
+    const fallback = FALLBACK_TILES.join(" ");
+    expect(fallback).toContain(
+      "services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base",
+    );
+    expect(fallback).toContain("{z}/{y}/{x}");
+    expect(fallback).not.toContain("basemaps.cartocdn.com");
     const attribution = OSM_STYLE.sources.osm.attribution;
-    expect(attribution).toContain("CARTO");
     expect(attribution).toContain("OpenStreetMap");
     expect(attribution).toContain("Esri");
   });
