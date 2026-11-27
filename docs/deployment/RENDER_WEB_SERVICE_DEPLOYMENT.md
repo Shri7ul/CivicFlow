@@ -73,7 +73,7 @@ blueprint to the **existing** service and verify the result):
 | Region | `singapore` (or any region supported by the Free plan) |
 | Root Directory | `backend` |
 | Build Command | `python -m pip install -r requirements.txt` |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Start Command | `python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Instance Type | `Free` |
 | Health Check Path | `/api/v1/health` |
 | Branch | `main` |
@@ -82,6 +82,14 @@ blueprint to the **existing** service and verify the result):
 `PYTHON_VERSION=3.11` must be set as an environment variable (see below) so
 Render does not fall back to its 3.14 default. `backend/.python-version` is
 also present for local tooling consistency.
+
+The `alembic upgrade head` prefix is mandatory: without it a deploy can serve
+an older schema where `workforce_notifications` and other workforce tables do
+not exist. **If the existing Render service was configured manually, update
+its Start Command in the Render dashboard as well** — editing `render.yaml`
+alone does not change a service that was not created from the blueprint.
+Notification reads now degrade to an empty inbox as a safety net, but the
+migration step is still required for the full workforce workflow.
 
 ### Why Python 3.11
 
@@ -193,7 +201,7 @@ truth, authorizations or pilots, and never activates a pilot.
 | `Could not open requirements file: 'requirements.txt'` | Build ran from the wrong directory, or an older commit is deployed | Set Root Directory to `backend`; confirm `backend/requirements.txt` is present on `main`; trigger a fresh deploy |
 | `ERROR: Could not find a version that satisfies the requirement ...` | Wrong `PYTHON_VERSION` or stale pip | Pin `PYTHON_VERSION=3.11`; the build command installs directly from `requirements.txt` |
 | Python 3.14.10 still shown in logs | Service is not using the blueprint / env var missing | Add `PYTHON_VERSION=3.11` in the Render Environment tab and redeploy |
-| `ModuleNotFoundError: No module named 'app'` | Working directory is not `backend`, or start command changed | Root Directory `backend`; start command must be exactly `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| `ModuleNotFoundError: No module named 'app'` | Working directory is not `backend`, or start command changed | Root Directory `backend`; start command must be exactly `python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Import error / `ValidationError` at startup with `DATABASE_URL is required in production` | Missing or blank `DATABASE_URL` | Set the Supabase DSN in the Render Environment tab; do not set `DEBUG=true` to bypass |
 | `CORS_ORIGINS cannot contain '*' when CORS_ALLOW_CREDENTIALS is true` | Wildcard CORS | Use the exact Vercel origin(s), comma-separated |
 | `health/database` or `ready` returns 503 | Supabase unreachable, wrong DSN, SSL or network policy | Verify DSN, that the Supabase project is active, and that `sslmode=require` is accepted; check Render logs |
@@ -256,7 +264,7 @@ The future Vercel frontend must be allowlisted by the backend:
 - [ ] Runtime = Python 3; Instance Type = Free; Region selected.
 - [ ] `PYTHON_VERSION=3.11` present in the Render Environment tab.
 - [ ] Build Command = `python -m pip install -r requirements.txt`.
-- [ ] Start Command = `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+- [ ] Start Command = `python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 - [ ] Health Check Path = `/api/v1/health`.
 - [ ] `APP_ENV=production`, `DEBUG=false`, `API_DOCS_ENABLED=false`.
 - [ ] `DATABASE_URL` and `SUPABASE_URL` set; Supabase keys set if used.

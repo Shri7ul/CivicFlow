@@ -9,7 +9,7 @@ Exact service values (identical to `render.yaml`):
 plan: free
 rootDir: backend
 buildCommand: python -m pip install -r requirements.txt
-startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 healthCheckPath: /api/v1/health
 PYTHON_VERSION: 3.11
 ```
@@ -26,7 +26,7 @@ PYTHON_VERSION: 3.11
 | Plan | `free` |
 | Region | `singapore` |
 | Build Command | `python -m pip install -r requirements.txt` |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Start Command | `python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Health Check Path | `/api/v1/health` |
 | Python version | `3.11` (env `PYTHON_VERSION`, also `backend/.python-version`) |
 
