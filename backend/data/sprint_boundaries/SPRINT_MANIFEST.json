@@ -346,8 +346,8 @@
     },
     {
       "file": "sprint_normalized_artifacts.json",
-      "bytes": 450,
-      "sha256": "ab8faf1e951789c2ee01439cc375a3920fd7cd90eff185da2712c7eac09a286f",
+      "bytes": 438,
+      "sha256": "2d39da99c8ed60dcb9a70872528b48052f38226eeb3a64692fd70489cc04645d",
       "source_url": "derived",
       "source_class": "CivicFlow sprint artifact",
       "license": "Internal",
@@ -357,8 +357,8 @@
     },
     {
       "file": "SPRINT_VERIFICATION.json",
-      "bytes": 1309,
-      "sha256": "2fd7ad32661315ee3d30ec166e7af742ebcd4bed178089dece4ea09ce662bb67",
+      "bytes": 1263,
+      "sha256": "bfe870dd360635ab4b4eade5f4607e760edcc28f54a06e85e361aae04d9df373",
       "source_url": "derived",
       "source_class": "CivicFlow sprint artifact",
       "license": "Internal",
