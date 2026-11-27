@@ -49,6 +49,7 @@ await call("Page.enable");
 await call("Runtime.enable");
 await call("Network.enable");
 const netFailures = [];
+const requestUrls = [];
 await call("Log.enable");
 ws.addEventListener("message", (ev) => {
   const msg = JSON.parse(ev.data);
@@ -61,8 +62,12 @@ ws.addEventListener("message", (ev) => {
   if (msg.method === "Network.loadingFailed") {
     netFailures.push({ url: msg.params?.requestId, error: msg.params?.errorText });
   }
-  if (msg.method === "Network.requestWillBeSent" && /54321|5432/.test(msg.params?.request?.url || "")) {
-    netFailures.push({ url: msg.params.request.url, stage: "sent" });
+  if (msg.method === "Network.requestWillBeSent") {
+    const requestUrl = msg.params?.request?.url || "";
+    requestUrls.push(requestUrl);
+    if (/54321|5432/.test(requestUrl)) {
+      netFailures.push({ url: requestUrl, stage: "sent" });
+    }
   }
 });
 
@@ -142,6 +147,14 @@ async function handle(cmd) {
       return { value: await evaluate("location.href") };
     case "netfail":
       return { value: netFailures.slice(-20) };
+    case "requests": {
+      const limit = typeof cmd.limit === "number" ? cmd.limit : 40;
+      return { value: requestUrls.slice(-limit) };
+    }
+    case "block": {
+      await call("Network.setBlockedURLs", { urls: cmd.urls || [] });
+      return { ok: true };
+    }
     case "cookies": {
       const res = await call("Network.getCookies", cmd.url ? { urls: [cmd.url] } : {});
       return { value: (res.result?.cookies || []).map((c) => ({

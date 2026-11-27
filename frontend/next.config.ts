@@ -35,6 +35,12 @@ function supabaseOrigins(): string[] {
 
 const supabaseSources = supabaseOrigins();
 
+const tileSources = [
+  "https://tile.openstreetmap.org",
+  "https://a.basemaps.cartocdn.com",
+  "https://b.basemaps.cartocdn.com",
+];
+
 const connectSources = [
   "'self'",
   apiOrigin(),
@@ -42,13 +48,14 @@ const connectSources = [
   // MapLibre fetches glyph PBFs with fetch(), which is governed by
   // connect-src (not font-src). Without this origin all map text labels fail.
   "https://fonts.openmaptiles.org",
+  ...tileSources,
 ].filter((item): item is string => Boolean(item));
 
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://tile.openstreetmap.org ${supabaseSources.filter((s) => s.startsWith("http:") || s.startsWith("https:")).join(" ")}`,
+  `img-src 'self' data: blob: ${tileSources.join(" ")} ${supabaseSources.filter((s) => s.startsWith("http:") || s.startsWith("https:")).join(" ")}`,
   `connect-src ${connectSources.join(" ")}`,
   "font-src 'self' data: https://fonts.openmaptiles.org",
   "object-src 'none'",

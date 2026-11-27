@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { ApiError } from "@/lib/api/client";
 import {
   WeatherAssessmentCard,
   type WeatherVariant,
@@ -14,6 +15,21 @@ import {
 import type { WeatherAssessment } from "@/types/weather";
 
 function message(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 403) {
+      return "Your role cannot view this weather assessment. The incident is unaffected.";
+    }
+    if (error.status === 404) {
+      return "No weather assessment has been generated yet. Staff can request one; the incident is unaffected.";
+    }
+    if (
+      error.code === "network_error" ||
+      error.code === "request_timeout"
+    ) {
+      return "Weather context is temporarily unavailable. Your report and its status are unaffected; use Retry to reload only this panel.";
+    }
+    return error.message;
+  }
   return error instanceof Error
     ? error.message
     : "Unable to load weather context.";

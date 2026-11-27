@@ -24,6 +24,8 @@ import {
 import {
   DEFAULT_MAP_VIEW,
   incidentsToGeoJSON,
+  installRasterTileFallback,
+  isTileLoadError,
   MAX_MAP_ZOOM,
   MIN_MAP_ZOOM,
   OSM_STYLE,
@@ -228,6 +230,7 @@ export function IncidentMapView() {
   useEffect(() => {
     let disposed = false;
     let map: MapLibreMap | null = null;
+    let removeTileFallback: (() => void) | null = null;
 
     void (async () => {
       try {
@@ -246,6 +249,13 @@ export function IncidentMapView() {
           attributionControl: false,
         });
         mapRef.current = map;
+        removeTileFallback = installRasterTileFallback(map, () =>
+          setMapError(null),
+        );
+        map.on("error", (event) => {
+          if (disposed || isTileLoadError(event.error?.message)) return;
+          setMapError(event.error?.message ?? "Map rendering failed.");
+        });
         if (process.env.NODE_ENV !== "production") {
           (
             window as Window & { __civicflowMap?: MapLibreMap }
@@ -339,6 +349,7 @@ export function IncidentMapView() {
 
     return () => {
       disposed = true;
+      removeTileFallback?.();
       if (process.env.NODE_ENV !== "production") {
         delete (window as Window & { __civicflowMap?: MapLibreMap })
           .__civicflowMap;
@@ -659,10 +670,14 @@ export function IncidentMapView() {
                 <p className="text-sm text-rose-200">{mapError}</p>
                 <button
                   type="button"
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    setMapError(null);
+                    mapRef.current?.resize();
+                    mapRef.current?.triggerRepaint();
+                  }}
                   className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm text-white"
                 >
-                  Reload map
+                  Retry map
                 </button>
               </div>
             </div>

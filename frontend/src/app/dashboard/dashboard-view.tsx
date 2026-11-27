@@ -4,9 +4,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { InboxPanel } from "@/components/notifications/inbox-panel";
 import { listIncidents } from "@/lib/api/incidents";
+import {
+  listNotifications,
+  markNotificationRead,
+} from "@/lib/api/workforce";
 import { navigationForRole, roleLabel } from "@/lib/auth/routing";
 import type { Incident, IncidentStatus } from "@/types/incidents";
+import type { WorkforceNotification } from "@/types/workforce";
 
 const STATUSES: readonly IncidentStatus[] = [
   "OPEN",
@@ -61,6 +67,11 @@ export function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [notices, setNotices] = useState<WorkforceNotification[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [noticeLoading, setNoticeLoading] = useState(true);
+  const [noticeError, setNoticeError] = useState<string | null>(null);
+  const [noticeBusyId, setNoticeBusyId] = useState<string | null>(null);
 
   const role = profile?.role ?? "CITIZEN";
 
@@ -113,9 +124,52 @@ export function DashboardView() {
     };
   }, [apiRequest, profile, reloadKey]);
 
+  useEffect(() => {
+    if (!profile) return;
+    let active = true;
+    listNotifications(apiRequest)
+      .then((result) => {
+        if (!active) return;
+        setNotices(result.items);
+        setUnread(result.unread);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setNoticeError(
+          cause instanceof Error ? cause.message : "Unable to load notifications.",
+        );
+      })
+      .finally(() => {
+        if (active) setNoticeLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [apiRequest, profile, reloadKey]);
+
+  const markRead = useCallback(
+    async (id: string) => {
+      setNoticeBusyId(id);
+      try {
+        await markNotificationRead(apiRequest, id);
+        setNotices((items) =>
+          items.map((item) =>
+            item.id === id ? { ...item, read_at: new Date().toISOString() } : item,
+          ),
+        );
+        setUnread((value) => Math.max(0, value - 1));
+      } finally {
+        setNoticeBusyId(null);
+      }
+    },
+    [apiRequest],
+  );
+
   const retry = useCallback(() => {
     setLoading(true);
     setError(null);
+    setNoticeLoading(true);
+    setNoticeError(null);
     setReloadKey((value) => value + 1);
   }, []);
   const allowedPaths = useMemo(() => navigationForRole(role), [role]);
@@ -259,6 +313,16 @@ export function DashboardView() {
                 {action.label}
               </Link>
             ))}
+          </div>
+          <div className="mt-8 border-t border-white/5 pt-6">
+            <InboxPanel
+              items={notices}
+              unread={unread}
+              loading={noticeLoading}
+              error={noticeError}
+              busyId={noticeBusyId}
+              onMarkRead={(id) => void markRead(id)}
+            />
           </div>
           <dl className="mt-8 space-y-4 border-t border-white/5 pt-6 text-sm">
             <div>

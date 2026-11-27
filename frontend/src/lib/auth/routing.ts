@@ -82,12 +82,20 @@ export function navigationForRole(role: ProfileRole): readonly string[] {
       return [
         ADMIN_PATH,
         OPERATIONS_PATH,
+        INCIDENTS_PREFIX,
+        RISK_PATH,
         DECISIONS_PATH,
         VALIDATION_PATH,
         PILOT_PATH,
       ];
     case "WORKER":
-      return [WORKER_PATH, `${WORKFORCE_PREFIX}/status`];
+      return [
+        WORKER_PATH,
+        INCIDENTS_PREFIX,
+        MAP_PATH,
+        RISK_PATH,
+        `${WORKFORCE_PREFIX}/status`,
+      ];
     default:
       return [
         DASHBOARD_PREFIX,

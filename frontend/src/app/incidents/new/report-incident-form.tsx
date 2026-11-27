@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { LocationPicker } from "@/components/map/location-picker";
 import { createIncident } from "@/lib/api/incidents";
+import {
+  clearIncidentDraft,
+  readIncidentDraft,
+  writeIncidentDraft,
+} from "@/lib/incident-draft";
 import {
   categories,
   categoryLabels,
@@ -28,16 +33,33 @@ function message(error: unknown): string {
 export function ReportIncidentForm() {
   const { apiRequest } = useAuth();
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<IncidentCategory>("DRAINAGE");
-  const [severity, setSeverity] = useState<IncidentSeverity>("MEDIUM");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-  const [address, setAddress] = useState("");
+  const [draft] = useState(() => readIncidentDraft());
+  const [title, setTitle] = useState(draft.title ?? "");
+  const [description, setDescription] = useState(draft.description ?? "");
+  const [category, setCategory] = useState<IncidentCategory>(
+    draft.category ?? "DRAINAGE",
+  );
+  const [severity, setSeverity] = useState<IncidentSeverity>(
+    draft.severity ?? "MEDIUM",
+  );
+  const [latitude, setLatitude] = useState(draft.latitude ?? "");
+  const [longitude, setLongitude] = useState(draft.longitude ?? "");
+  const [address, setAddress] = useState(draft.address ?? "");
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    writeIncidentDraft({
+      title,
+      description,
+      category,
+      severity,
+      latitude,
+      longitude,
+      address,
+    });
+  }, [title, description, category, severity, latitude, longitude, address]);
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
@@ -86,6 +108,7 @@ export function ReportIncidentForm() {
         longitude: lon,
         address: address.trim() || null,
       });
+      clearIncidentDraft();
       router.push(`/incidents/${incident.id}`);
     } catch (submitError) {
       setError(message(submitError));
@@ -106,7 +129,8 @@ export function ReportIncidentForm() {
       </h1>
       <p className="mt-3 text-sm leading-6 text-slate-400">
         Pin the location and describe what you observed. Your report starts as
-        Open and is visible to you and municipal staff.
+        Open and is visible to you and municipal staff. Draft entries are kept
+        in this tab if you switch tabs or adjust the map.
       </p>
 
       <form

@@ -4,6 +4,7 @@ import {
   buildLoginHref,
   canAccessPath,
   hasSupabaseAuthCookie,
+  homePathForRole,
   isProtectedPath,
   navigationForRole,
   roleLabel,
@@ -62,6 +63,12 @@ describe("protected routing", () => {
 });
 
 describe("role-aware navigation", () => {
+  it("lands each role on the dashboard they can actually access", () => {
+    expect(homePathForRole("ADMIN")).toBe("/admin");
+    expect(homePathForRole("WORKER")).toBe("/worker");
+    expect(homePathForRole("CITIZEN")).toBe("/dashboard");
+  });
+
   it("shows only modules a citizen can actually use", () => {
     const paths = navigationForRole("CITIZEN");
     expect(paths).toContain("/dashboard");
@@ -91,10 +98,14 @@ describe("role-aware navigation", () => {
     expect(paths).toContain("/decisions");
     expect(paths).toContain("/validation");
     expect(paths).toContain("/pilot");
+    expect(paths).toContain("/risk");
+    expect(paths).toContain("/incidents");
     expect(paths).not.toContain("/workforce/apply");
     expect(paths).not.toContain("/worker");
     expect(canAccessPath("ADMIN", "/operations/alerts")).toBe(true);
     expect(canAccessPath("ADMIN", "/admin")).toBe(true);
+    expect(canAccessPath("ADMIN", "/risk")).toBe(true);
+    expect(canAccessPath("ADMIN", "/incidents/123")).toBe(true);
     expect(canAccessPath("ADMIN", "/worker")).toBe(false);
   });
 
@@ -102,6 +113,8 @@ describe("role-aware navigation", () => {
     const paths = navigationForRole("WORKER");
     expect(paths).toContain("/worker");
     expect(paths).toContain("/workforce/status");
+    expect(paths).toContain("/risk");
+    expect(paths).toContain("/incidents");
     expect(paths).not.toContain("/admin");
     expect(paths).not.toContain("/operations");
     expect(paths).not.toContain("/decisions");

@@ -2,31 +2,50 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { safeNextPath } from "@/lib/auth/routing";
+import { homePathForRole, safeNextPath } from "@/lib/auth/routing";
 
 type AuthMode = "login" | "signup";
 
 export function AuthForm({ mode }: { mode: AuthMode }) {
-  const { status, error: authError, isConfigured, signIn, signUp } = useAuth();
+  const {
+    status,
+    profile,
+    error: authError,
+    isConfigured,
+    signIn,
+    signUp,
+  } = useAuth();
   const router = useRouter();
-  const [nextPath] = useState(() =>
+  const [nextParam] = useState(() =>
     typeof window === "undefined"
-      ? "/dashboard"
-      : safeNextPath(new URLSearchParams(window.location.search).get("next")),
+      ? null
+      : new URLSearchParams(window.location.search).get("next"),
   );
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Wait for the authoritative DB role before choosing a landing page.
+  // Sending an ADMIN to /dashboard only made the route guard bounce them to
+  // /admin, which read as a broken or missing dashboard.
+  const destination = useMemo(
+    () =>
+      nextParam
+        ? safeNextPath(nextParam)
+        : profile
+          ? homePathForRole(profile.role)
+          : "/dashboard",
+    [nextParam, profile],
+  );
+
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(nextPath);
-      router.refresh();
+    if (status === "authenticated" && profile) {
+      router.replace(destination);
     }
-  }, [nextPath, router, status]);
+  }, [destination, profile, router, status]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,8 +87,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         );
         return;
       }
-      router.replace(nextPath);
-      router.refresh();
+      // The authenticated effect performs the role-aware navigation once
+      // the profile (and therefore the authoritative role) has loaded.
     } finally {
       setPending(false);
     }

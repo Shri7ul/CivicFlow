@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap, StyleSpecification } from "maplibre-gl";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { RiskIntelligencePanel } from "@/components/intelligence/risk-intelligence-panel";
 import {
   getRiskCell,
   getRiskCellsGeoJSON,
@@ -24,7 +25,12 @@ import {
   trendTone,
   factorTone,
 } from "@/lib/risk";
-import { DEFAULT_MAP_VIEW, OSM_STYLE } from "@/lib/map";
+import {
+  DEFAULT_MAP_VIEW,
+  installRasterTileFallback,
+  isTileLoadError,
+  OSM_STYLE,
+} from "@/lib/map";
 import type {
   RiskCellDetail,
   RiskCellBrief,
@@ -440,6 +446,7 @@ export function RiskMapView() {
     let disposed = false;
     let map: MapLibreMap | null = null;
     let resizeObserver: ResizeObserver | null = null;
+    let removeTileFallback: (() => void) | null = null;
     void (async () => {
       try {
         const maplibre = await import("maplibre-gl");
@@ -454,6 +461,9 @@ export function RiskMapView() {
           attributionControl: false,
         });
         mapRef.current = map;
+        removeTileFallback = installRasterTileFallback(map, () =>
+          setMapError(null),
+        );
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-right");
         map.addControl(new maplibre.AttributionControl({ compact: true }), "bottom-right");
         map.on("load", () => {
@@ -477,7 +487,8 @@ export function RiskMapView() {
           setMapReady(true);
         });
         map.on("error", (event) => {
-          if (!disposed) setMapError(event.error?.message ?? "Map rendering failed.");
+          if (disposed || isTileLoadError(event.error?.message)) return;
+          setMapError(event.error?.message ?? "Map rendering failed.");
         });
         map.on("moveend", () => {
           if (!disposed && map) setViewport(viewportFromMap(map));
@@ -493,6 +504,7 @@ export function RiskMapView() {
     return () => {
       disposed = true;
       resizeObserver?.disconnect();
+      removeTileFallback?.();
       map?.remove();
       mapRef.current = null;
     };
@@ -505,15 +517,24 @@ export function RiskMapView() {
       setLoading(true);
       setError(null);
       try {
-        const [nextData, nextSummary, nextQuality] = await Promise.all([
+        // Data quality is staff-only and optional. Loading it in the same
+        // Promise.all made a single 403 hide the entire citizen risk view.
+        const [nextData, nextSummary] = await Promise.all([
           getRiskCellsGeoJSON(apiRequest, filters, { signal }),
           getRiskSummary(apiRequest, filters, { signal }),
-          getRiskDataQuality(apiRequest),
         ]);
         if (requestId !== requestRef.current) return;
         setData(nextData);
         setSummary(nextSummary);
-        setQuality(nextQuality);
+        void getRiskDataQuality(apiRequest)
+          .then((nextQuality) => {
+            if (requestId === requestRef.current) setQuality(nextQuality);
+          })
+          .catch(() => {
+            // The map and score summary remain fully usable without this
+            // privileged adjunct panel.
+            if (requestId === requestRef.current) setQuality([]);
+          });
       } catch (loadError) {
         if (
           loadError instanceof Error &&
@@ -733,7 +754,11 @@ export function RiskMapView() {
                   <p>{mapError}</p>
                   <button
                     type="button"
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                      setMapError(null);
+                      mapRef.current?.resize();
+                      mapRef.current?.triggerRepaint();
+                    }}
                     className="mt-3 rounded-lg border border-white/15 px-3 py-1.5 text-xs"
                   >
                     Retry map
@@ -857,39 +882,7 @@ export function RiskMapView() {
         </div>
       ) : null}
 
-      {config ? (
-        <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
-          <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Risk model and limitations
-          </summary>
-          <div className="mt-3 grid gap-4 text-[11px] leading-5 text-slate-400 sm:grid-cols-2">
-            <div>
-              <p className="font-semibold text-slate-300">
-                {config.model_version} · config {config.config_hash.slice(0, 12)}
-              </p>
-              <p className="mt-1">
-                Factor weights:{" "}
-                {Object.entries(config.factor_weights)
-                  .map(([key, value]) => `${key} ${(value * 100).toFixed(0)}%`)
-                  .join(" · ")}
-              </p>
-              <p className="mt-1">
-                H3 resolutions {config.resolutions.min}–{config.resolutions.max};
-                default {config.resolutions.default}. Privacy minimum{" "}
-                {config.privacy_min_incidents} incidents for Citizen views.
-              </p>
-            </div>
-            <ul className="list-disc space-y-1 pl-4">
-              {config.limitations.map((limitation) => (
-                <li key={limitation}>{limitation}</li>
-              ))}
-              {data?.limitations.map((limitation) => (
-                <li key={limitation}>{limitation}</li>
-              ))}
-            </ul>
-          </div>
-        </details>
-      ) : null}
+      <RiskIntelligencePanel config={config} data={data} summary={summary} />
     </main>
   );
 }

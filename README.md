@@ -33,13 +33,33 @@ and fresh external validation with an evidence workspace).
   `A06 — External API & Fault Tolerance`. The evidence set, scorecard and limitations are in
   [docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md](docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md).
 - **Three-role local E2E proof:** [docs/hackathon/CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md](docs/hackathon/CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md).
+- **Final product recovery & submission readiness:** [docs/hackathon/CIVICFLOW_FINAL_SUBMISSION_READINESS.md](docs/hackathon/CIVICFLOW_FINAL_SUBMISSION_READINESS.md).
+- **Final UI evidence:** [docs/hackathon/screenshots/final/](docs/hackathon/screenshots/final/).
 - **Source repository:** https://github.com/Shri7ul/CivicFlow
-- **Live frontend (historically documented; not re-verified in the 2026-11-27 sprint):**
-  https://civic-flow-lilac.vercel.app
-- **Live API health (historically documented; not re-verified in the 2026-11-27 sprint):**
-  https://civicflow-8dol.onrender.com/api/v1/health
+- **Live frontend:** https://civic-flow-lilac.vercel.app (landing page and login route re-verified in the 2026-11-27 recovery sprint)
+- **Live API health:** https://civicflow-8dol.onrender.com/api/v1/health (re-verified: HTTP 200; CORS allows the Vercel origin)
 - **YouTube presentation:** not yet published. The real link must be added before submission;
   no placeholder video is claimed.
+
+### Judge demo sequence
+
+The verified local sequence is: sign in as Citizen → report an incident from
+`/incidents/new` → open the detail page for weather context and the generated
+incident ID → sign in as Admin → open **Admin operations** → **Incident review**
+→ verify and assign → sign in as Worker → accept, start, record progress and
+submit completion → sign in as Admin → **Assignments** → verify completion →
+sign in as Citizen → show `Resolved` and the full status timeline. The Risk
+Intelligence page is reachable from every role's navigation and shows the
+actual deterministic scoring engine with version, weights, confidence,
+generated-at timestamp and limitations.
+
+**Environment variables:** the frontend needs `NEXT_PUBLIC_API_BASE_URL`,
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
+`NEXT_PUBLIC_SITE_URL` at build time; the backend needs `DATABASE_URL`,
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CORS_ORIGINS`
+and the optional `WEATHER_*` provider settings. See
+`frontend/.env.example`, `backend/.env.example`, `render.yaml` and
+`docs/deployment/PRODUCTION_RUNBOOK.md`. No credentials are committed.
 
 Phase 8 adds a bounded NYC 311 public-data snapshot, provenance-preserving
 ingestion, leakage-safe rolling-origin risk backtesting against four baselines,

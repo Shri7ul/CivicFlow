@@ -1,25 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { navigationForRole, roleLabel } from "@/lib/auth/routing";
+import { homePathForRole, navigationForRole, roleLabel } from "@/lib/auth/routing";
 
 const NAV_ITEMS = [
-  { path: "/incidents", label: "Incidents" },
+  { path: "/dashboard", label: "Dashboard" },
+  { path: "/incidents", label: "My incidents" },
   { path: "/map", label: "Map" },
-  { path: "/risk", label: "Risk" },
+  { path: "/risk", label: "Risk intelligence" },
+  { path: "/operations", label: "Incident review" },
   { path: "/decisions", label: "Decisions" },
-  { path: "/operations", label: "Operations" },
   { path: "/validation", label: "Validation" },
   { path: "/pilot", label: "Pilot" },
   { path: "/workforce/apply", label: "Apply" },
   { path: "/workforce/status", label: "Application" },
   { path: "/worker", label: "Worker desk" },
-  { path: "/admin", label: "Admin" },
-  { path: "/dashboard", label: "Dashboard" },
+  { path: "/admin", label: "Admin operations" },
 ] as const;
 
 /** Shared by the full app shell and the compact public landing header. */
@@ -57,6 +57,7 @@ type AuthNavProps = {
 
 export function AuthNav({ compact = false, minimal = false }: AuthNavProps) {
   const { status, profile } = useAuth();
+  const pathname = usePathname();
 
   if (status === "loading") {
     return (
@@ -75,10 +76,14 @@ export function AuthNav({ compact = false, minimal = false }: AuthNavProps) {
             {roleLabel(profile.role)}
           </span>
           <Link
-            href="/dashboard"
+            href={homePathForRole(profile.role)}
             className="rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-xs font-medium text-accent transition hover:bg-accent/15 sm:text-sm"
           >
-            Workspace
+            {profile.role === "ADMIN"
+              ? "Admin workspace"
+              : profile.role === "WORKER"
+                ? "Worker workspace"
+                : "My workspace"}
           </Link>
           <SignOutControl />
         </div>
@@ -97,25 +102,25 @@ export function AuthNav({ compact = false, minimal = false }: AuthNavProps) {
         ) : null}
         {NAV_ITEMS.filter((item) =>
           navigationForRole(profile.role).includes(item.path),
-        ).map((item) =>
-          item.path === "/dashboard" ? (
+        ).map((item) => {
+          const active =
+            pathname === item.path || pathname.startsWith(`${item.path}/`);
+          const highlighted = active || item.path === homePathForRole(profile.role);
+          return (
             <Link
               key={item.path}
               href={item.path}
-              className="rounded-lg border border-accent/25 bg-accent/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-accent/15 sm:px-3 sm:text-sm"
+              aria-current={active ? "page" : undefined}
+              className={
+                highlighted
+                  ? "rounded-lg border border-accent/25 bg-accent/10 px-2.5 py-2 text-xs font-medium text-emerald-200 transition hover:bg-accent/15 sm:px-3 sm:text-sm"
+                  : "rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
+              }
             >
               {item.label}
             </Link>
-          ) : (
-            <Link
-              key={item.path}
-              href={item.path}
-              className="rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:text-white sm:text-sm"
-            >
-              {item.label}
-            </Link>
-          ),
-        )}
+          );
+        })}
         <SignOutControl />
       </div>
     );
