@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AuthNav } from "@/components/auth/auth-nav";
+import { AuthNavAccount, AuthNavLinks } from "@/components/auth/auth-nav";
 import { getApiBaseUrl } from "@/lib/api/client";
 import { siteConfig } from "@/config/app";
 
@@ -34,10 +34,10 @@ function LogoMark() {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-950/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-4 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center gap-3 px-5 sm:px-8">
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+          className="flex shrink-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
         >
           <LogoMark />
           <span>
@@ -52,7 +52,7 @@ export function SiteHeader() {
 
         <nav
           aria-label="Primary navigation"
-          className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:gap-2"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:gap-2"
         >
           <Link
             href="/#status"
@@ -95,8 +95,9 @@ export function SiteHeader() {
             </svg>
           </a>
           <span aria-hidden="true" className="mx-1 h-5 w-px bg-white/10" />
-          <AuthNav />
+          <AuthNavLinks />
         </nav>
+        <AuthNavAccount />
       </div>
     </header>
   );
