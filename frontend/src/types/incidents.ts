@@ -12,8 +12,13 @@ export type IncidentSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type IncidentStatus =
   | "OPEN"
+  | "VERIFIED"
+  | "ASSIGNED"
+  | "ACCEPTED"
   | "ACKNOWLEDGED"
   | "IN_PROGRESS"
+  | "COMPLETION_SUBMITTED"
+  | "VERIFIED_COMPLETED"
   | "RESOLVED"
   | "CLOSED";
 

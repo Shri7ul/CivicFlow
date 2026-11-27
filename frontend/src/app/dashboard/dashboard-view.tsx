@@ -10,16 +10,26 @@ import type { Incident, IncidentStatus } from "@/types/incidents";
 
 const STATUSES: readonly IncidentStatus[] = [
   "OPEN",
+  "VERIFIED",
+  "ASSIGNED",
+  "ACCEPTED",
   "ACKNOWLEDGED",
   "IN_PROGRESS",
+  "COMPLETION_SUBMITTED",
+  "VERIFIED_COMPLETED",
   "RESOLVED",
   "CLOSED",
 ];
 
 const statusLabels: Record<IncidentStatus, string> = {
   OPEN: "Open",
+  VERIFIED: "Verified",
+  ASSIGNED: "Assigned",
+  ACCEPTED: "Accepted",
   ACKNOWLEDGED: "Acknowledged",
   IN_PROGRESS: "In progress",
+  COMPLETION_SUBMITTED: "Completion submitted",
+  VERIFIED_COMPLETED: "Verified completed",
   RESOLVED: "Resolved",
   CLOSED: "Closed",
 };

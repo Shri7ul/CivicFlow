@@ -18,11 +18,27 @@ function apiOrigin(): string | null {
   }
 }
 
+function supabaseOrigins(): string[] {
+  const defaults = ["https://*.supabase.co", "wss://*.supabase.co"];
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!value) return defaults;
+  try {
+    const httpOrigin = new URL(value).origin;
+    const wsOrigin = httpOrigin.replace(/^http/, "ws");
+    // A self-hosted or local Supabase must be permitted by CSP as well,
+    // otherwise signup/login silently fail with "Failed to fetch".
+    return [...new Set([httpOrigin, wsOrigin, ...defaults])];
+  } catch {
+    return defaults;
+  }
+}
+
+const supabaseSources = supabaseOrigins();
+
 const connectSources = [
   "'self'",
   apiOrigin(),
-  "https://*.supabase.co",
-  "wss://*.supabase.co",
+  ...supabaseSources,
   // MapLibre fetches glyph PBFs with fetch(), which is governed by
   // connect-src (not font-src). Without this origin all map text labels fail.
   "https://fonts.openmaptiles.org",
@@ -32,7 +48,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.supabase.co",
+  `img-src 'self' data: blob: https://tile.openstreetmap.org ${supabaseSources.filter((s) => s.startsWith("http:") || s.startsWith("https:")).join(" ")}`,
   `connect-src ${connectSources.join(" ")}`,
   "font-src 'self' data: https://fonts.openmaptiles.org",
   "object-src 'none'",

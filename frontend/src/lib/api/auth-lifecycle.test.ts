@@ -77,6 +77,20 @@ describe("profile load and provisioning lifecycle", () => {
     expect(secondCall?.[1]?.body).toBe("{}");
   });
 
+  it("forwards the signup full name when provisioning a new profile", async () => {
+    stubFetch();
+    fetchMock
+      .mockResolvedValueOnce(profileRequired())
+      .mockResolvedValueOnce(jsonResponse(PROFILE));
+
+    await loadOrProvisionProfile("access-token", "  Synthetic Local Citizen  ");
+
+    const body = fetchMock.mock.calls[1]?.[1]?.body;
+    expect(JSON.parse(String(body))).toEqual({
+      full_name: "Synthetic Local Citizen",
+    });
+  });
+
   it("loads the profile successfully on a subsequent request after provisioning", async () => {
     stubFetch();
     fetchMock

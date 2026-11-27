@@ -8,16 +8,26 @@ type BadgeTone = "slate" | "emerald" | "amber" | "rose" | "sky" | "violet";
 
 export const statusLabels: Record<IncidentStatus, string> = {
   OPEN: "Open",
+  VERIFIED: "Verified",
+  ASSIGNED: "Assigned",
+  ACCEPTED: "Accepted",
   ACKNOWLEDGED: "Acknowledged",
   IN_PROGRESS: "In progress",
+  COMPLETION_SUBMITTED: "Completion submitted",
+  VERIFIED_COMPLETED: "Verified completed",
   RESOLVED: "Resolved",
   CLOSED: "Closed",
 };
 
 export const statusTones: Record<IncidentStatus, BadgeTone> = {
   OPEN: "amber",
+  VERIFIED: "sky",
+  ASSIGNED: "violet",
+  ACCEPTED: "violet",
   ACKNOWLEDGED: "sky",
   IN_PROGRESS: "violet",
+  COMPLETION_SUBMITTED: "amber",
+  VERIFIED_COMPLETED: "emerald",
   RESOLVED: "emerald",
   CLOSED: "slate",
 };
@@ -80,11 +90,21 @@ export function allowedNextStatuses(
 ): IncidentStatus[] {
   switch (status) {
     case "OPEN":
-      return ["ACKNOWLEDGED", "IN_PROGRESS"];
+      return ["ACKNOWLEDGED", "IN_PROGRESS", "VERIFIED"];
+    case "VERIFIED":
+      return ["ASSIGNED", "OPEN"];
+    case "ASSIGNED":
+      return ["ACCEPTED", "VERIFIED"];
+    case "ACCEPTED":
+      return ["IN_PROGRESS", "ASSIGNED"];
     case "ACKNOWLEDGED":
       return ["IN_PROGRESS"];
     case "IN_PROGRESS":
-      return ["RESOLVED"];
+      return ["RESOLVED", "COMPLETION_SUBMITTED", "ASSIGNED"];
+    case "COMPLETION_SUBMITTED":
+      return ["VERIFIED_COMPLETED", "IN_PROGRESS", "ASSIGNED"];
+    case "VERIFIED_COMPLETED":
+      return ["RESOLVED", "IN_PROGRESS"];
     case "RESOLVED":
       return ["CLOSED"];
     case "CLOSED":

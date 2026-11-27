@@ -339,3 +339,11 @@ This is an honest self-assessment using the rubric's own per-challenge breakdown
 ## O. Final verdict
 
 The sprint closed the two decisive baseline gaps: a real, explainable weather-aware incident intelligence feature now exists end to end, and two advanced challenges are declared with independent evidence. The honest self-assessment rises from **54/100 to 94/100**. The implementation is verified locally across 353 backend tests and 169 frontend tests, a clean production build, an Alembic head of `0026_weather_intelligence`, a live read-only Open-Meteo call, and 13 real browser screenshots across six viewports. Submission is still incomplete until the presentation video is created and the live URL re-verified; no award or winner status is asserted.
+
+---
+
+## P. Follow-up local three-role E2E sprint
+
+The state described in §N was the end of the previous sprint. A subsequent local-only sprint exercised the full CITIZEN → WORKER → ADMIN lifecycle in an isolated SQLite/GoTrue environment, found and repaired additional UI and provisioning defects, and re-scored the project. See
+[CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md](CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md)
+for the current evidence, 28 E2E screenshots, security probes, test results and the updated final self-score. That report supersedes the "worktree is clean / 13 screenshots" snapshot in §N; push and deployment remain intentionally withheld.

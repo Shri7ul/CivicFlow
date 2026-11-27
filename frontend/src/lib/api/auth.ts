@@ -16,7 +16,10 @@ export function fetchCurrentProfile(token: string): Promise<Profile> {
  * backend explicitly reports that this verified identity has none. Existing
  * profiles are reused; no role is ever supplied by the browser.
  */
-export async function loadOrProvisionProfile(token: string): Promise<Profile> {
+export async function loadOrProvisionProfile(
+  token: string,
+  fullName?: string | null,
+): Promise<Profile> {
   try {
     return await fetchCurrentProfile(token);
   } catch (error) {
@@ -25,7 +28,7 @@ export async function loadOrProvisionProfile(token: string): Promise<Profile> {
       error.status === 403 &&
       error.code === "profile_required"
     ) {
-      return provisionProfile(token);
+      return provisionProfile(token, fullName);
     }
     throw error;
   }

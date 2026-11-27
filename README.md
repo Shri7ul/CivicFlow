@@ -32,6 +32,7 @@ and fresh external validation with an evidence workspace).
 - **Declared advanced challenges:** `A02 — Intelligent Decisions & Optimization` and
   `A06 — External API & Fault Tolerance`. The evidence set, scorecard and limitations are in
   [docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md](docs/hackathon/CIVICFLOW_HACKATHON_AUTONOMOUS_AUDIT.md).
+- **Three-role local E2E proof:** [docs/hackathon/CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md](docs/hackathon/CIVICFLOW_LOCAL_E2E_ROLE_VALIDATION.md).
 - **Source repository:** https://github.com/Shri7ul/CivicFlow
 - **Live frontend (historically documented; not re-verified in the 2026-11-27 sprint):**
   https://civic-flow-lilac.vercel.app

@@ -73,6 +73,14 @@ function loginError(error: unknown): string {
   return profileLoadMessage(error);
 }
 
+function fullNameFromSession(session: Session): string | undefined {
+  const metadata = session.user.user_metadata as Record<string, unknown> | undefined;
+  const candidate = metadata?.full_name ?? metadata?.name;
+  return typeof candidate === "string" && candidate.trim().length > 0
+    ? candidate.trim()
+    : undefined;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = isSupabaseConfigured();
   const [status, setStatus] = useState<AuthStatus>(
@@ -103,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const nextProfile: Profile = await loadOrProvisionProfile(
         session.access_token,
+        fullNameFromSession(session),
       );
 
       if (requestId !== requestIdRef.current) {

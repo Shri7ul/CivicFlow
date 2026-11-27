@@ -30,7 +30,13 @@ import {
   setWorkerStatus,
   assignmentAction,
   getAdminOverview,
+  verifyCompletion,
 } from "@/lib/api/workforce";
+import {
+  changeIncidentStatus,
+  listIncidents,
+} from "@/lib/api/incidents";
+import type { Incident } from "@/types/incidents";
 import type {
   AdminOverview,
   Assignment,
@@ -41,10 +47,17 @@ import type {
   WorkforceNotification,
 } from "@/types/workforce";
 
-type Tab = "overview" | "applications" | "workers" | "assignments" | "audit";
+type Tab =
+  | "overview"
+  | "incidents"
+  | "applications"
+  | "workers"
+  | "assignments"
+  | "audit";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "incidents", label: "Incident review" },
   { id: "applications", label: "Worker applications" },
   { id: "workers", label: "Workers" },
   { id: "assignments", label: "Assignments" },
@@ -58,6 +71,7 @@ export function AdminWorkspace() {
   const { apiRequest } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [applications, setApplications] = useState<WorkerApplication[]>([]);
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -82,6 +96,9 @@ export function AdminWorkspace() {
         ]);
         setOverview(counts);
         setNotices(inbox.items);
+      } else if (tab === "incidents") {
+        const result = await listIncidents(apiRequest, { pageSize: 100 });
+        setIncidents(result.items);
       } else if (tab === "applications") {
         setApplications((await listWorkerApplications(apiRequest, { limit: 100 })).items);
       } else if (tab === "workers") {
@@ -190,6 +207,41 @@ export function AdminWorkspace() {
     }
   }
 
+  async function verifyIncident(incident: Incident) {
+    setBusy(`verify-${incident.id}`);
+    setError(null);
+    try {
+      await changeIncidentStatus(apiRequest, incident.id, {
+        status: "VERIFIED",
+        note: "Admin verification for field assignment",
+      });
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Verification failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function verifyWork(assignment: Assignment, approve: boolean) {
+    setBusy(`verify-work-${assignment.id}`);
+    setError(null);
+    try {
+      await verifyCompletion(
+        apiRequest,
+        assignment.id,
+        approve,
+        note.trim() || undefined,
+      );
+      setNote("");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Completion verification failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const overviewCards: { label: string; value: number }[] = overview
     ? [
         { label: "Total incidents", value: overview.total_incidents },
@@ -285,6 +337,70 @@ export function AdminWorkspace() {
             )}
           </Card>
         </div>
+      ) : null}
+
+      {!loading && tab === "incidents" ? (
+        <Card title={`Incidents (${incidents.length})`}>
+          <p className="mb-4 text-xs text-slate-400">
+            Verify an Open report before assignment, then assign the best
+            eligible worker. Verification is recorded in the incident history.
+          </p>
+          {incidents.length === 0 ? (
+            <EmptyState message="No incidents have been reported yet." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className={th}>Incident</th>
+                    <th className={th}>Category</th>
+                    <th className={th}>Severity</th>
+                    <th className={th}>Status</th>
+                    <th className={th}>Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {incidents.map((incident) => (
+                    <tr key={incident.id}>
+                      <td className={td}>
+                        <span className="block text-white">{incident.title}</span>
+                        <span className="text-xs text-slate-500">
+                          {shortId(incident.id)}
+                        </span>
+                      </td>
+                      <td className={td}>{incident.category}</td>
+                      <td className={td}>{incident.severity}</td>
+                      <td className={td}>{incident.status}</td>
+                      <td className={td}>
+                        {incident.status === "OPEN" ? (
+                          <button
+                            type="button"
+                            disabled={busy !== null}
+                            onClick={() => void verifyIncident(incident)}
+                            className="rounded-md border border-emerald-400/30 px-2 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50"
+                          >
+                            Verify
+                          </button>
+                        ) : incident.status === "VERIFIED" ? (
+                          <button
+                            type="button"
+                            disabled={busy !== null}
+                            onClick={() => void assignFromCandidates(incident.id)}
+                            className="rounded-md border border-emerald-400/30 px-2 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50"
+                          >
+                            Assign best candidate
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       ) : null}
 
       {!loading && tab === "applications" ? (
@@ -544,6 +660,25 @@ export function AdminWorkspace() {
                                 className="rounded-md border border-white/10 px-2 py-1.5 text-xs text-slate-300 transition hover:bg-white/5 disabled:opacity-50"
                               >
                                 Cancel
+                              </button>
+                            </div>
+                          ) : item.status === "COMPLETION_SUBMITTED" ? (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={busy !== null}
+                                onClick={() => void verifyWork(item, true)}
+                                className="rounded-md border border-emerald-400/30 px-2 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10 disabled:opacity-50"
+                              >
+                                Verify completion
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy !== null}
+                                onClick={() => void verifyWork(item, false)}
+                                className="rounded-md border border-white/10 px-2 py-1.5 text-xs text-slate-300 transition hover:bg-white/5 disabled:opacity-50"
+                              >
+                                Reject
                               </button>
                             </div>
                           ) : (

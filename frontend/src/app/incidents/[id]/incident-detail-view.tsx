@@ -39,8 +39,13 @@ const labelClass =
 
 const actionLabels: Record<IncidentStatus, string> = {
   OPEN: "Reopen",
+  VERIFIED: "Verified",
+  ASSIGNED: "Assigned",
+  ACCEPTED: "Accepted",
   ACKNOWLEDGED: "Acknowledge",
   IN_PROGRESS: "Start work",
+  COMPLETION_SUBMITTED: "Completion submitted",
+  VERIFIED_COMPLETED: "Verified completed",
   RESOLVED: "Mark resolved",
   CLOSED: "Close incident",
 };
