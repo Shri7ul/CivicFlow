@@ -21,13 +21,23 @@ export const DEFAULT_MAP_VIEW = mapViewForContext(
 
 export const MIN_MAP_ZOOM = 8;
 export const MAX_MAP_ZOOM = 19;
-export const OSM_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
-// CARTO's hosted basemap is a policy-compliant alternative that attributes
-// OpenStreetMap. It is used only if the primary tile host fails, and it is
-// requested lazily rather than prefetched.
+
+// tile.openstreetmap.org serves a rendered "Access blocked / usage policy"
+// image with HTTP 200 when a client is blocked. MapLibre sees a successful
+// image, so an error-based fallback never fires and users see a wall of 403
+// tiles. CARTO's hosted basemap is built on OpenStreetMap data, is
+// policy-compliant for this use, and is therefore the primary source.
+export const BASEMAP_TILES = [
+  "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+  "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+  "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+];
+// Kept as an alias for callers that import the old name.
+export const OSM_TILES = BASEMAP_TILES;
+// A second CARTO style on different hosts, used only for genuine load errors.
 export const FALLBACK_TILES = [
+  "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
   "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
 ];
 const MAP_ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a>';
@@ -38,7 +48,7 @@ export const OSM_STYLE = {
   sources: {
     osm: {
       type: "raster" as const,
-      tiles: OSM_TILES,
+      tiles: BASEMAP_TILES,
       tileSize: 256,
       attribution: MAP_ATTRIBUTION,
     },

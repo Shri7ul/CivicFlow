@@ -8,17 +8,21 @@ afterEach(() => {
 
 describe("reverseGeocode", () => {
   it("builds a readable label from address components", async () => {
-    const fetchMock = vi.fn(async (_url: URL | string, _init?: RequestInit) => ({
-      ok: true,
-      json: async () => ({
-        display_name: "Road 12, Dhanmondi, Dhaka",
-        address: {
-          road: "Road 12",
-          neighbourhood: "Dhanmondi",
-          city: "Dhaka",
-        },
-      }),
-    }));
+    const fetchMock = vi.fn(async (url: URL | string, init?: RequestInit) => {
+      void url;
+      void init;
+      return {
+        ok: true,
+        json: async () => ({
+          display_name: "Road 12, Dhanmondi, Dhaka",
+          address: {
+            road: "Road 12",
+            neighbourhood: "Dhanmondi",
+            city: "Dhaka",
+          },
+        }),
+      };
+    });
     vi.stubGlobal("fetch", fetchMock);
     const label = await reverseGeocode(23.81031, 90.41252);
     expect(label).toBe("Road 12, Dhanmondi, Dhaka");

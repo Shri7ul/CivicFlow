@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BASEMAP_TILES,
+  FALLBACK_TILES,
   incidentToFeature,
   incidentsToGeoJSON,
+  OSM_STYLE,
   selectedIncidentGeoJSON,
 } from "@/lib/map";
 import type { Incident } from "@/types/incidents";
@@ -25,6 +28,21 @@ const incident: Incident = {
   history: [],
   evidence: [],
 };
+
+describe("basemap configuration", () => {
+  it("uses a policy-compliant CARTO basemap instead of the blocked OSM tile host", () => {
+    const tiles = OSM_STYLE.sources.osm.tiles;
+    expect(tiles).toEqual(BASEMAP_TILES);
+    expect(tiles.join(" ")).not.toContain("tile.openstreetmap.org");
+    expect(tiles.join(" ")).toContain("basemaps.cartocdn.com/dark_all");
+  });
+
+  it("keeps a usable fallback and correct attribution", () => {
+    expect(FALLBACK_TILES.join(" ")).toContain("basemaps.cartocdn.com");
+    expect(OSM_STYLE.sources.osm.attribution).toContain("CARTO");
+    expect(OSM_STYLE.sources.osm.attribution).toContain("OpenStreetMap");
+  });
+});
 
 describe("incident map helpers", () => {
   it("creates a GeoJSON point with encoded properties", () => {
