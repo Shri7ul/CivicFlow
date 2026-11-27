@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CivicInsightsCard } from "@/components/ai/civic-insights-card";
 import { useAuth } from "@/components/auth/auth-provider";
 import { InboxPanel } from "@/components/notifications/inbox-panel";
 import { listIncidents } from "@/lib/api/incidents";
@@ -263,7 +264,8 @@ export function DashboardView() {
         ) : null}
       </section>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-[1.4fr_0.6fr]">
+      <div className="mt-8 grid items-start gap-5 lg:grid-cols-[1.4fr_0.6fr]">
+        <div className="space-y-5">
         <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-white">Recent incidents</h2>
@@ -297,12 +299,36 @@ export function DashboardView() {
               ))}
             </ul>
           ) : (
-            <p className="mt-5 rounded-2xl border border-white/5 bg-slate-950/40 p-5 text-sm text-slate-400">
-              No incidents in this scope yet. Reports you submit will appear here
-              with their current status.
-            </p>
+            <div className="mt-5 flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-950/40 p-6 text-center">
+              <span className="flex size-10 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-5">
+                  <path
+                    d="M12 8v5m0 3.5h.01M10.3 4.3 2.8 17.5a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <p className="mt-3 text-sm font-medium text-slate-200">
+                No incidents in this scope yet
+              </p>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">
+                Reports you submit appear here with their live status. The local
+                insights card below also updates as reports arrive.
+              </p>
+              <Link
+                href="/incidents/new"
+                className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-400/15"
+              >
+                Report an incident
+              </Link>
+            </div>
           )}
         </section>
+          <CivicInsightsCard />
+        </div>
 
         <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
           <h2 className="text-lg font-semibold text-white">Quick actions</h2>
