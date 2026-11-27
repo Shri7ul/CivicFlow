@@ -1,0 +1,14 @@
+# Hash-pinned evidence artifacts must be checked out byte-for-byte on every
+# platform. Without these rules a checkout with core.autocrlf=true rewrites
+# LF to CRLF and invalidates the recorded SHA-256 digests and byte sizes.
+backend/data/** binary
+docs/hackathon/screenshots/** binary
+*.geojson binary
+*.json.gz binary
+*.gz binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
